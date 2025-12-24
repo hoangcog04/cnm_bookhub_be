@@ -1,0 +1,74 @@
+services:
+  api: &main_app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: cnm_bookhub_be:${CNM_BOOKHUB_BE_VERSION:-latest}
+    restart: always
+    env_file:
+      - path: .env
+        required: false
+    labels:
+      # Enables traefik for this container.
+      - traefik.enable=true
+      - traefik.http.routers.cnm_bookhub_be.rule=Host(`${CNM_BOOKHUB_BE_TRAEFIK_HOST:-cnm_bookhub_be.localhost}`)
+      - traefik.http.routers.cnm_bookhub_be.entrypoints=http
+      - traefik.http.routers.cnm_bookhub_be.service=cnm_bookhub_be
+      - traefik.http.services.cnm_bookhub_be.loadbalancer.server.port=${CNM_BOOKHUB_BE_PORT:-8000}
+    networks:
+      - default
+      - traefik-shared
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    environment:
+      CNM_BOOKHUB_BE_HOST: 0.0.0.0
+      CNM_BOOKHUB_BE_DB_HOST: cnm_bookhub_be-db
+      CNM_BOOKHUB_BE_DB_PORT: 3306
+      CNM_BOOKHUB_BE_DB_USER: cnm_bookhub_be
+      CNM_BOOKHUB_BE_DB_PASS: cnm_bookhub_be
+      CNM_BOOKHUB_BE_DB_BASE: cnm_bookhub_be
+
+  db:
+    image: mysql:8.4
+    hostname: cnm_bookhub_be-db
+    restart: always
+    environment:
+      MYSQL_USER: "cnm_bookhub_be"
+      MYSQL_PASSWORD: "cnm_bookhub_be"
+      MYSQL_DATABASE: "cnm_bookhub_be"
+      MYSQL_ROOT_PASSWORD: "cnm_bookhub_be"
+      MYSQL_HOST: "0.0.0.0"
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - --user=cnm_bookhub_be
+        - --password=cnm_bookhub_be
+      interval: 10s
+      timeout: 5s
+      retries: 40
+    volumes:
+      - "cnm_bookhub_be-db-data:/var/lib/mysql"
+
+  migrator:
+    <<: *main_app
+    restart: "no"
+    command: alembic upgrade head
+    depends_on:
+      db:
+        condition: service_healthy
+
+
+
+volumes:
+  cnm_bookhub_be-db-data:
+    name: cnm_bookhub_be-db-data
+
+networks:
+  # Network for traefik.
+  traefik-shared:
+    name: traefik-shared
