@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from cnm_bookhub_be.db.models import load_all_models
 from cnm_bookhub_be.settings import settings
 
 
@@ -39,6 +40,8 @@ async def lifespan_setup(
     :param app: the fastAPI application.
     :return: function that actually performs actions.
     """
+    # Load all models before setting up database
+    load_all_models()
 
     app.middleware_stack = None
     _setup_db(app)

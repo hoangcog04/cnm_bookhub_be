@@ -1,5 +1,6 @@
 # type: ignore
 import uuid
+from typing import TYPE_CHECKING
 
 from fastapi import Depends
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin, schemas
@@ -9,15 +10,42 @@ from fastapi_users.authentication import (
     JWTStrategy,
 )
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cnm_bookhub_be.db.base import Base
 from cnm_bookhub_be.db.dependencies import get_db_session
 from cnm_bookhub_be.settings import settings
 
+if TYPE_CHECKING:
+    from cnm_bookhub_be.db.models.orders import Order
+    from cnm_bookhub_be.db.models.social_accounts import SocialAccount
+    from cnm_bookhub_be.db.models.wards import Ward
+
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
     """Represents a user entity."""
+
+    __tablename__ = "users"
+
+    full_name: Mapped[str | None] = mapped_column(String(length=255), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phone_number: Mapped[str | None] = mapped_column(String(length=20), nullable=True)
+    ward_code: Mapped[str | None] = mapped_column(
+        String(length=20),
+        ForeignKey("wards.code"),
+        nullable=True,
+    )
+    address_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    role: Mapped[str | None] = mapped_column(String(length=50), nullable=True)
+
+    # Relationships
+    ward: Mapped["Ward"] = relationship("Ward", back_populates="users")
+    social_accounts: Mapped[list["SocialAccount"]] = relationship(
+        "SocialAccount", back_populates="user"
+    )
+    orders: Mapped[list["Order"]] = relationship("Order", back_populates="user")
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
@@ -69,7 +97,9 @@ def get_jwt_strategy() -> JWTStrategy:
 
     :returns: instance of JWTStrategy with provided settings.
     """
-    return JWTStrategy(secret=settings.users_secret, lifetime_seconds=None)
+    return JWTStrategy(
+        secret=settings.users_secret, lifetime_seconds=settings.users_lifetime_seconds
+    )
 
 
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
