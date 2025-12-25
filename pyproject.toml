@@ -23,6 +23,7 @@ dependencies = [
   "cryptography >=46.0.3,<47",
   "httptools >=0.7.1,<1",
   "pymongo >=4.15.4,<5",
+  "cloudinary >=1.41.0,<2",
 ]
 
 [dependency-groups]
