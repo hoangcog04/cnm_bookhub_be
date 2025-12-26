@@ -210,6 +210,27 @@ alembic upgrade <revision_id>
 alembic downgrade <revision_id>
 ```
 
+### Seed dữ liệu ban đầu (tùy chọn)
+
+Sau khi chạy migrations, bạn có thể seed dữ liệu mẫu (superuser, category, và 5 quyển sách):
+
+**Với uv:**
+```bash
+uv run python -m cnm_bookhub_be.db.seed
+```
+
+**Với pip:**
+```bash
+python -m cnm_bookhub_be.db.seed
+```
+
+Script sẽ tạo:
+- Superuser: `admin@example.com` / `123456`
+- Category: "Truyện tranh"
+- 5 quyển sách mẫu
+
+**Lưu ý:** Script có thể chạy nhiều lần mà không tạo duplicate (idempotent).
+
 ### Environment Variables
 
 - Tất cả biến môi trường phải có prefix `CNM_BOOKHUB_BE_` (trừ `USERS_SECRET`). Xem `cnm_bookhub_be/settings.py` để biết các biến có sẵn.

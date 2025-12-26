@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cnm_bookhub_be.db.base import Base
@@ -21,7 +21,9 @@ class Book(Base):
     author: Mapped[str] = mapped_column(String(length=255), nullable=False)
     price: Mapped[float] = mapped_column(Float, nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    image_urls: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    more_info: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id"),
         nullable=False,
