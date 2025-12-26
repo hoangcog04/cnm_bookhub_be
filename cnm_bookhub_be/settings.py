@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     db_base: str = "cnm_bookhub_be"
     db_echo: bool = False
 
+    # Cloudinary Settings
+    cloud_name: str = ""
+    api_key: str = ""
+    api_secret: str = ""
+
     @property
     def db_url(self) -> URL:
         """
