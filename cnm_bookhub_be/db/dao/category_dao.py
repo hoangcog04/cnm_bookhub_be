@@ -29,7 +29,7 @@ class CategoryDAO:
     #UPDATE
     async def update_category(self, id: int, **fields) -> Category | None:
         item = await self.get_category_by_id(id)
-        if iter is None:
+        if item is None:
             return None
         for key, value in fields.items():
             if value is not None:
