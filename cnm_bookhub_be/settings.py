@@ -44,8 +44,8 @@ class Settings(BaseSettings):
     # Variables for the database
     db_host: str = "localhost"
     db_port: int = 3306
-    db_user: str = "root"
-    db_pass: str = ""  # noqa: S105
+    db_user: str = "cnm_bookhub_be"
+    db_pass: str = "cnm_bookhub_be"  # noqa: S105
     db_base: str = "cnm_bookhub_be"
     db_echo: bool = False
 
