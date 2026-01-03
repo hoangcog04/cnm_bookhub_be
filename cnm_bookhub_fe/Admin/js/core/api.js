@@ -13,19 +13,17 @@ const API = {
 
       if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
 
-      // Kiểm tra Content-Length để tránh lỗi khi body rỗng
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
         return await response.json();
       } else {
-        // Nếu không phải JSON, thử đọc text để debug hoặc return null
         const text = await response.text();
-        if (!text) return null; // Body rỗng
+        if (!text) return null;
         try {
-          return JSON.parse(text); // Cố parse lần nữa
+          return JSON.parse(text);
         } catch (e) {
           console.warn("API trả về không phải JSON:", text);
-          return null; // Return null để phía caller tự xử lý (ví dụ hiện list rỗng)
+          return null;
         }
       }
     } catch (error) {

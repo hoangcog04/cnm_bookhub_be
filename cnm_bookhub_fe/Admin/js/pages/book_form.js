@@ -19,8 +19,8 @@ const BookFormPage = {
       if (this.isEditMode) {
         Layout.setPageTitle("Chỉnh sửa sách");
         document.getElementById("form-subtitle").textContent = "Chỉnh sửa thông tin sách";
-        this.setupBackButton("Quay lại trang chi tiết", "book-detail");
-        this.setupCancelButton("book-detail");
+        this.setupBackButton("Quay lại trang chi tiết", `books/detail?id=${bookId}`);
+        this.setupCancelButton(`books/detail?id=${bookId}`);
         await this.loadBookData(bookId);
       } else {
         Layout.setPageTitle("Thêm sách mới");
@@ -41,7 +41,7 @@ const BookFormPage = {
 
   async loadCategories() {
     try {
-      const response = await CategoriesAPI.getAll();
+      const response = await CategoriesAPI.getCategoryName();
       const categories = Array.isArray(response) ? response : (response.data || []);
 
       const categorySelect = document.getElementById("book-category");
@@ -228,14 +228,15 @@ const BookFormPage = {
 
     try {
       const formData = this.getFormData();
+      let response;
 
       if (this.isEditMode) {
-        // await BooksAPI.update(this.bookId, formData);
-        Utils.showToast("success", "Cập nhật sách thành công!");
+        response = await BooksAPI.update(this.bookId, formData);
       } else {
-        // await BooksAPI.create(formData);
-        Utils.showToast("success", "Thêm sách mới thành công!");
+        response = await BooksAPI.create(formData);
       }
+
+      Utils.showToast("success", response.message || "Thao tác thành công!");
 
       // Xóa selectedBookId nếu có
       sessionStorage.removeItem("selectedBookId");
@@ -246,7 +247,7 @@ const BookFormPage = {
       }, 1500);
     } catch (error) {
       console.error("Error saving book:", error);
-      Utils.showToast("error", "Có lỗi xảy ra khi lưu sách. Vui lòng thử lại.");
+      Utils.showToast("error", error.message || "Có lỗi xảy ra khi lưu sách. Vui lòng thử lại.");
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalText;

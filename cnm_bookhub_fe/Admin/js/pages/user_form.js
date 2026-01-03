@@ -3,23 +3,30 @@ const UserFormPage = {
 
     render: async function () {
         try {
+            // Load necessary APIs
             await ScriptLoader.load("js/api/users.js");
+            await ScriptLoader.load("js/api/locations.js"); // Load LocationsAPI
             await Layout.renderBody("pages/user_form.html");
 
             // Get ID from URL Query Params
             const queryId = Router.queryParams && Router.queryParams.id;
             this.userId = queryId || null;
 
+            // Load initial data (Provinces)
+            await this.loadProvinces();
+
             if (this.userId) {
                 Layout.setPageTitle("Cập nhật người dùng");
                 document.getElementById("user-form-title").textContent = "Cập nhật tài khoản";
-                this.loadUserDetail(this.userId);
+                await this.loadUserDetail(this.userId);
                 this.setupBackButton("Quay lại danh sách", "users");
             } else {
                 Layout.setPageTitle("Thêm người dùng mới");
                 document.getElementById("user-form-title").textContent = "Thêm người dùng mới";
                 this.setupBackButton("Quay lại danh sách", "users");
                 // Reset form or set defaults
+                this.resetForm();
+                this.toggleEditMode(true);
                 document.getElementById("user-avatar-preview").src = "https://ui-avatars.com/api/?name=New+User&background=random";
             }
 
@@ -38,11 +45,63 @@ const UserFormPage = {
         }
     },
 
+    loadProvinces: async function () {
+        try {
+            const provinces = await LocationsAPI.getAllProvinces();
+            const provinceSelect = document.getElementById("user-province");
+
+            // Clear existing options except default
+            // provinceSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>'; // Keep HTML default
+
+            provinces.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.code;
+                opt.textContent = p.full_name;
+                provinceSelect.appendChild(opt);
+            });
+        } catch (error) {
+            console.error("Error loading provinces:", error);
+        }
+    },
+
+    loadWards: async function (provinceCode, selectedWardCode = null) {
+        const wardSelect = document.getElementById("user-ward");
+
+        // Reset Ward Dropdown
+        wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+
+        if (!provinceCode) {
+            wardSelect.disabled = true; // Disable if no province
+            return;
+        }
+
+        // Only enable if we are in Edit Mode (implied by context usually, but here handled by toggleEditMode later)
+        // However, if we are VIEWING detail, it should remain disabled until Edit is clicked.
+        // The toggleEditMode function handles the disabled attribute broadly. 
+        // Here we just prepare the data.
+
+        try {
+            const wards = await LocationsAPI.getAllWards(provinceCode);
+            wards.forEach(w => {
+                const opt = document.createElement("option");
+                opt.value = w.code;
+                opt.textContent = w.full_name;
+                wardSelect.appendChild(opt);
+            });
+
+            if (selectedWardCode) {
+                wardSelect.value = selectedWardCode;
+            }
+        } catch (error) {
+            console.error("Error loading wards:", error);
+        }
+    },
+
     loadUserDetail: async function (id) {
         try {
             const user = await UsersAPI.getById(id);
-            // Assuming user is object or { data: ... }
             const userData = user.data || user;
+            console.log(userData);
 
             if (!userData || !userData.id) {
                 Utils.showToast("error", "Không tìm thấy người dùng!");
@@ -61,24 +120,24 @@ const UserFormPage = {
                 document.getElementById("user-avatar-url").value = userData.avatar_url || "";
             }
 
-            // 2. Populate Ward/Province Split (ComboBoxes)
-            // Function to add option if not exists
-            const addOption = (selectId, value, text) => {
-                const select = document.getElementById(selectId);
-                if (select && value) {
-                    const opt = document.createElement("option");
-                    opt.value = value;
-                    opt.text = text;
-                    opt.selected = true;
-                    select.add(opt);
-                }
-            };
+            // 2. Populate Location (Province/Ward)
+            // Assuming userData.ward structure: { code: "...", full_name: "...", province: { code: "...", full_name: "..." } }
 
-            if (userData.ward) {
-                if (userData.ward.province) {
-                    addOption("user-province", userData.ward.province.code || "UNKNOWN", userData.ward.province.full_name);
+            if (userData.ward && userData.ward.province) {
+                const pInfo = userData.ward.province; // Expected: { code, full_name }
+                const wInfo = userData.ward;          // Expected: { code, full_name }
+
+                // 1. Select Province
+                // Try finding by Code first, then by Name
+                const selectedPCode = this.setSelectOption("user-province", pInfo.code, pInfo.full_name);
+
+                // 2. Load Wards if a province was successfully selected
+                if (selectedPCode) {
+                    await this.loadWards(selectedPCode);
+
+                    // 3. Select Ward
+                    this.setSelectOption("user-ward", wInfo.code, wInfo.full_name);
                 }
-                addOption("user-ward", userData.ward.code || "UNKNOWN", userData.ward.full_name);
             }
 
             // 3. Populate Sidebar Profile
@@ -155,11 +214,41 @@ const UserFormPage = {
                 }
             });
         }
+
+        // --- Location Event Listeners ---
+        const provinceSelect = document.getElementById("user-province");
+        if (provinceSelect) {
+            provinceSelect.addEventListener("change", async (e) => {
+                const pCode = e.target.value;
+                await this.loadWards(pCode);
+
+                // If in Edit Mode, ensure ward is enabled if province is selected
+                // (Assuming we are in Edit mode if we can change province)
+                const wardSelect = document.getElementById("user-ward");
+                if (wardSelect) {
+                    wardSelect.disabled = !pCode;
+                }
+            });
+        }
     },
 
     toggleEditMode: function (isEdit) {
+        // Enable/Disable all form controls
         const inputs = document.querySelectorAll(".form-control-modern");
-        inputs.forEach(input => input.disabled = !isEdit);
+        inputs.forEach(input => {
+            // Special handling for user-ward: 
+            // If isEdit is true, only enable if province has value
+            if (input.id === "user-ward") {
+                if (isEdit) {
+                    const pVal = document.getElementById("user-province").value;
+                    input.disabled = !pVal;
+                } else {
+                    input.disabled = true;
+                }
+            } else {
+                input.disabled = !isEdit;
+            }
+        });
 
         // Toggle Buttons
         const viewActions = document.getElementById("view-actions");
@@ -177,44 +266,148 @@ const UserFormPage = {
         }
     },
 
+    resetForm: function () {
+        // Clear all inputs
+        document.getElementById("user-name").value = "";
+        document.getElementById("user-email").value = "";
+        document.getElementById("user-phone").value = "";
+        document.getElementById("user-role").value = "user";
+        document.getElementById("user-address").value = "";
+        document.getElementById("user-avatar-url").value = "";
+
+        // Reset location
+        document.getElementById("user-province").value = "";
+        const wardSelect = document.getElementById("user-ward");
+        wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+        wardSelect.disabled = true;
+
+        // Reset sidebar placeholders
+        if (document.getElementById("profile-name-display"))
+            document.getElementById("profile-name-display").textContent = "New User";
+        if (document.getElementById("profile-email-display"))
+            document.getElementById("profile-email-display").textContent = "---";
+        if (document.getElementById("profile-id-display"))
+            document.getElementById("profile-id-display").textContent = "New";
+    },
+
     saveUser: async function () {
         const name = document.getElementById("user-name").value;
         const email = document.getElementById("user-email").value;
         const phone = document.getElementById("user-phone").value;
         const role = document.getElementById("user-role").value;
-        // const password = document.getElementById("user-password").value; // Removed from UI as requested? Or keep separate?
-        // Assuming password reset is separate flow now based on sidebar button.
 
-        if (!name || !email) {
-            Utils.showToast("warning", "Vui lòng nhập tên và email");
-            return;
-        }
+        // Validation moved to API (Backend)
+        // if (!name || !email) { ... }
+
+        // Get Province/Ward info for saving
+        const wardSelect = document.getElementById("user-ward");
+        const provinceSelect = document.getElementById("user-province");
+
+        const selectedWardCode = wardSelect.value;
+        const selectedWardText = wardSelect.options[wardSelect.selectedIndex]?.text;
+        const selectedProvinceCode = provinceSelect.value;
+        const selectedProvinceText = provinceSelect.options[provinceSelect.selectedIndex]?.text;
 
         const data = {
             full_name: name,
             email,
             phone_number: phone,
             role,
-            // Map other fields...
             avatar_url: document.getElementById("user-avatar-url").value,
             address_detail: document.getElementById("user-address").value,
-            // Ward/Province logic would go here
         };
 
+        // Construct basic ward object if selected
+        if (selectedWardCode && selectedProvinceCode) {
+            data.ward = {
+                code: selectedWardCode,
+                full_name: selectedWardText,
+                province: {
+                    code: selectedProvinceCode,
+                    full_name: selectedProvinceText
+                }
+            };
+        } else if (selectedProvinceCode) {
+            // Province only? Likely API needs ward, but handling generic case
+            data.ward = {
+                province: {
+                    code: selectedProvinceCode,
+                    full_name: selectedProvinceText
+                }
+            };
+        }
+
         try {
+            let response;
             if (this.userId) {
-                await UsersAPI.update(this.userId, data);
-                Utils.showToast("success", "Cập nhật thành công!");
-                this.toggleEditMode(false); // Return to view mode
+                // Update
+                response = await UsersAPI.update(this.userId, data);
             } else {
-                await UsersAPI.create(data);
-                Utils.showToast("success", "Thêm mới thành công!");
+                // Create
+                response = await UsersAPI.create(data);
+            }
+
+            // Success Handling
+            // Check if response has a message, otherwise default
+            const successMessage = response.message || (this.userId ? "Cập nhật thành công!" : "Thêm mới thành công!");
+            Utils.showToast("success", successMessage);
+
+            if (this.userId) {
+                this.toggleEditMode(false);
+            } else {
+                // Only navigate if success (which is here, because failure throws error)
                 Router.navigate("users");
             }
-            // Router.navigate("users"); // Don't navigate away on edit save, just stay
+
         } catch (error) {
             console.error("Error saving user:", error);
-            Utils.showToast("error", "Có lỗi xảy ra khi lưu dữ liệu");
+            // Extract message from Error object or API response format
+            const errorMessage = error.message || "Có lỗi xảy ra khi lưu dữ liệu";
+            Utils.showToast("error", errorMessage);
+            // Do NOT navigate away on error
         }
+    },
+
+    /**
+     * Helper to select an option by Value (ID) or Text (Name)
+     * Returns the selected value if found, otherwise null
+     */
+    setSelectOption: function (elementId, value, text) {
+        const select = document.getElementById(elementId);
+        if (!select) return null;
+
+        // 1. Try by Value (Code) - Exact Match
+        if (value) {
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value == value) {
+                    select.selectedIndex = i;
+                    return value;
+                }
+            }
+        }
+
+        // 2. Try by Text (Name) - Smart Match
+        if (text) {
+            const normalize = (str) => {
+                return str.toLowerCase()
+                    .replace(/^(thành phố|tỉnh|tp\.|tp)/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+            };
+
+            const targetText = normalize(text);
+
+            for (let i = 0; i < select.options.length; i++) {
+                const optionText = normalize(select.options[i].textContent);
+
+                // Exact match after normalization
+                if (optionText === targetText) {
+                    select.selectedIndex = i;
+                    return select.options[i].value;
+                }
+            }
+        }
+
+        return null;
     }
 };

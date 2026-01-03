@@ -132,7 +132,10 @@ const CategoriesPage = {
 
   openForm: function (id = null) {
     if (id) {
-      // Edit Mode - Navigate via URL Params
+      // Edit Mode
+      // FIX: Luôn cập nhật Session Storage để đảm bảo trang đích nhận đúng ID
+      // Bỏ qua lỗi tiềm ẩn của việc parse URL params
+      sessionStorage.setItem("selectedCategoryId", id);
       Router.navigate(`categories/categoryDetail?id=${id}`);
     } else {
       // Create Mode
@@ -143,6 +146,7 @@ const CategoriesPage = {
 
   // openModal has been replaced by openForm
   openModal: function (id = null) {
+    console.log(id);
     this.openForm(id);
   },
 

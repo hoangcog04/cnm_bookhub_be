@@ -155,10 +155,8 @@ const CategoryFormPage = {
         const status = document.getElementById("category-status").checked; // true = Active, false = Inactive (Deleted)
         const desc = document.getElementById("category-desc").value;
 
-        if (!name.trim()) {
-            Utils.showToast("warning", "Vui lòng nhập tên danh mục");
-            return;
-        }
+        // Validation moved to API (Backend)
+        // if (!name.trim()) { ... }
 
         try {
             // Data object

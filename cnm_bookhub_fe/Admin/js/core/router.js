@@ -27,7 +27,6 @@ const Router = {
   queryParams: {},
 
   navigate: function (fullRoute) {
-    // Split route and query params
     const [path, queryString] = fullRoute.split("?");
     this.queryParams = {};
 
@@ -44,12 +43,9 @@ const Router = {
     }
 
     this.currentRoute = path;
-    // Update hash without triggering hashchange event loop if possible, 
-    // but here we usually rely on hashchange unless called programmatically.
-    // If called programmatically, we should update the URL.
     if (window.location.hash.slice(2) !== fullRoute) {
       window.location.hash = "/" + fullRoute;
-      return; // Hash change will trigger listener, so we stop here
+      return;
     }
 
     this.render(path);
@@ -66,8 +62,6 @@ const Router = {
       item.classList.remove("active");
     });
 
-    // Handle nested routes or exact match
-    // Simplified: just match exact data-route
     const activeNav = document.querySelector(`[data-route="${route}"]`);
     if (activeNav) {
       activeNav.classList.add("active");

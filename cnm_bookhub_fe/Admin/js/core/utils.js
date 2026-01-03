@@ -32,5 +32,9 @@ const Utils = {
     str = str.replace(/Đ/g, "D");
     return str;
   },
+
+  formatCurrency: function (amount) {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  }
 };
 

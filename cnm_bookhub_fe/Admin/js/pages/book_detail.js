@@ -5,8 +5,13 @@ const BookDetailPage = {
       await Layout.renderBody("pages/book_detail.html");
       Layout.setPageTitle("Chi tiết sách");
 
-      const bookId = sessionStorage.getItem("selectedBookId");
-      if (!bookId) return Router.navigate("books");
+      // Lấy ID từ query params
+      const bookId = Router.queryParams.id;
+      if (!bookId) {
+        Utils.showToast("error", "Không tìm thấy mã sách");
+        setTimeout(() => Router.navigate("books"), 1000);
+        return;
+      }
 
       // Gọi API lấy chi tiết
       const book = await BooksAPI.getBookById(bookId);

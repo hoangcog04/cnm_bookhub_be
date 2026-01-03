@@ -140,7 +140,7 @@ const BooksPage = {
     return `
         <tr>
             <td class="td-image">
-                <img src="${book.image_url || 'https://via.placeholder.com/150'}" alt="${book.title}" class="book-thumb">
+                <img src="${book.image_url}" alt="${book.title}" class="book-thumb">
             </td>
             <td><strong>${book.title}</strong></td>
             <td>${authorDisplay}</td>
@@ -312,7 +312,7 @@ const BooksPage = {
   },
 
   viewDetail: function (bookId) {
-    sessionStorage.setItem("selectedBookId", bookId)
-    Router.navigate("book-detail")
+    // sessionStorage.setItem("selectedBookId", bookId) // Không dùng sessionStorage nữa
+    Router.navigate(`books/detail?id=${bookId}`)
   },
 }
