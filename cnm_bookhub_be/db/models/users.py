@@ -1,7 +1,7 @@
 # type: ignore
 import uuid
 from typing import TYPE_CHECKING
-
+from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase, SQLAlchemyBaseOAuthAccountTableUUID
 from fastapi import Depends
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin, schemas
 from fastapi_users.authentication import (
@@ -13,7 +13,7 @@ from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from cnm_bookhub_be.db.models.oauth_account import OAuthAccount
 from cnm_bookhub_be.db.base import Base
 from cnm_bookhub_be.db.dependencies import get_db_session
 from cnm_bookhub_be.settings import settings
@@ -44,6 +44,9 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     ward: Mapped["Ward"] = relationship("Ward", back_populates="users")
     social_accounts: Mapped[list["SocialAccount"]] = relationship(
         "SocialAccount", back_populates="user"
+    )
+    oauth_accounts: Mapped[list[OAuthAccount]] = relationship(
+        "OAuthAccount", lazy="joined"
     )
     orders: Mapped[list["Order"]] = relationship("Order", back_populates="user")
 
@@ -76,7 +79,7 @@ async def get_user_db(
     :param session: asynchronous SQLAlchemy session.
     :yields: instance of SQLAlchemyUserDatabase.
     """
-    yield SQLAlchemyUserDatabase(session, User)
+    yield SQLAlchemyUserDatabase(session, User, OAuthAccount)
 
 
 async def get_user_manager(
