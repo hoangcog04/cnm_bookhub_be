@@ -1,5 +1,9 @@
 from fastapi import APIRouter
-
+from pydantic import SecretStr
+from httpx_oauth.clients.google import GoogleOAuth2
+from httpx_oauth.clients.github import GitHubOAuth2
+from cnm_bookhub_be.settings import settings
+from cnm_bookhub_be.services.oauth_service import google_oauth_client, github_oauth_client
 from cnm_bookhub_be.db.models.users import (
     UserCreate,  # type: ignore
     UserRead,  # type: ignore
@@ -35,4 +39,27 @@ router.include_router(
 )
 router.include_router(
     api_users.get_auth_router(auth_jwt), prefix="/auth/jwt", tags=["auth"]
+)
+router.include_router(
+    api_users.get_oauth_router(
+        google_oauth_client, 
+        auth_jwt,
+        settings.users_secret,
+        associate_by_email=True,
+        is_verified_by_default=True,
+    ),
+    prefix="/auth/google",
+    tags=["auth"],
+)
+
+router.include_router(
+    api_users.get_oauth_router(
+        github_oauth_client,
+        auth_jwt,
+        settings.users_secret,
+        associate_by_email=True,
+        is_verified_by_default=True,
+    ),
+    prefix="/auth/github",
+    tags=["auth"],
 )
