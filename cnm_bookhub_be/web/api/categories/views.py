@@ -2,7 +2,11 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.param_functions import Depends
 from cnm_bookhub_be.db.dao.category_dao import CategoryDAO
 from cnm_bookhub_be.db.models.categories import Category
-from cnm_bookhub_be.web.api.categories.schema import (CategoryDTO, CategoryInputDTO, CategoryUpdateDTO)
+from cnm_bookhub_be.web.api.categories.schema import (
+    CategoryDTO, 
+    CategoryInputDTO, 
+    CategoryUpdateDTO,
+)
 
 router = APIRouter()
 
@@ -25,7 +29,7 @@ async def get_category(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found",)
     return item
-
+    
 #POST
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_category(

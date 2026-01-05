@@ -3,7 +3,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from cnm_bookhub_be.db.dependencies import get_db_session
 from cnm_bookhub_be.db.models.categories import Category
-
 class CategoryDAO:
     def __init__(self, session: AsyncSession = Depends(get_db_session)) -> None:
         self.session = session
@@ -29,7 +28,7 @@ class CategoryDAO:
     #UPDATE
     async def update_category(self, id: int, **fields) -> Category | None:
         item = await self.get_category_by_id(id)
-        if iter is None:
+        if item is None:
             return None
         for key, value in fields.items():
             if value is not None:
