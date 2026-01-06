@@ -10,6 +10,7 @@ from cnm_bookhub_be.web.api import (
     order_items,
     orders,
     provinces,
+    test_mail,
     users,
     wards,
 )
@@ -28,3 +29,4 @@ api_router.include_router(
     order_items.router, prefix="/order-items", tags=["order-items"]
 )
 api_router.include_router(books.router, prefix="/books", tags=["books"])
+api_router.include_router(test_mail.router, prefix="/mail", tags=["mail"])

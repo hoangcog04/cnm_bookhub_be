@@ -1,12 +1,14 @@
 from fastapi import APIRouter, HTTPException, status
 from fastapi.param_functions import Depends
+
 from cnm_bookhub_be.db.dao.province_dao import ProvinceDAO
 from cnm_bookhub_be.db.models.provinces import Province
 from cnm_bookhub_be.web.api.provinces.schema import ProvinceDTO
 
 router = APIRouter()
 
-#GET ALL
+
+# GET ALL
 @router.get("/", response_model=list[ProvinceDTO])
 async def get_provinces(
     limit: int = 10,

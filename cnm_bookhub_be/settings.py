@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     api_key: str = ""
     api_secret: str = ""
 
+    # Mail
+    email_provider: str = "mailpit"  # mailpit, sendgrid
+    # Mailpit Settings
+    mailpit_host: str = "localhost"
+    mailpit_port: int = 1025
+    # Sendgrid Settings
+    sendgrid_api_key: str = ""
+    sendgrid_from_email: str = ""
+
     @property
     def db_url(self) -> URL:
         """
