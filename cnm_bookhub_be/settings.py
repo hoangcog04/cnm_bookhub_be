@@ -63,6 +63,14 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = ""
     sendgrid_from_email: str = ""
 
+    # GitHub OAuth
+    github_client_id: str = ""
+    github_client_secret: str = ""
+
+    #  Google Oauth
+    google_client_id: str = ""
+    google_client_secret: str = ""
+
     @property
     def db_url(self) -> URL:
         """
