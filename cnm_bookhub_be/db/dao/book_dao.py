@@ -110,3 +110,11 @@ class BookDAO:
         book.deleted = True
         await self.session.commit()
         return True
+
+    # GET BOOKS BY CATEGORY ID
+    async def get_books_category_id(self, category_id: int) -> list[Book]:
+        """Lấy tất cả books theo category_id."""
+        results = await self.session.execute(
+            select(Book).where(Book.category_id == category_id),
+        )
+        return list(results.scalars().fetchall())
