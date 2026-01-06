@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from cnm_bookhub_be.db.dao.book_dao import BookDAO
 from cnm_bookhub_be.db.models.books import Book
-from cnm_bookhub_be.web.api.books.schema import (BookDTO,BookCreateDTO,BookUpdateDTO,)
+from cnm_bookhub_be.web.api.books.schema import (BookDTO,BookCreateDTO,BookUpdateDTO, BooksByCategoryDTO)
 
 router = APIRouter()
 
@@ -84,3 +84,16 @@ async def soft_delete_book(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Book not found or already deleted",
         )
+        
+@router.get("/category/{category_id}", response_model=list[BooksByCategoryDTO])
+async def get_books_by_category(
+    category_id: int,
+    dao: BookDAO = Depends(),
+) -> list[Book]:
+    books = await dao.get_books_category_id(category_id)
+    if not books:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No books found in category {category_id}",
+        )
+    return books
