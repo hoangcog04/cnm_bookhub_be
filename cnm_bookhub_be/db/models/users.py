@@ -54,13 +54,46 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 class UserRead(schemas.BaseUser[uuid.UUID]):
     """Represents a read command for a user."""
 
+    full_name: str | None = None
+    avatar_url: str | None = None
+    phone_number: str | None = None
+    ward_code: str | None = None
+    address_detail: str | None = None
+    role: str | None = None
+
 
 class UserCreate(schemas.BaseUserCreate):
     """Represents a create command for a user."""
 
+    pass
+
 
 class UserUpdate(schemas.BaseUserUpdate):
-    """Represents an update command for a user."""
+    """Represents an update command for a user profile.
+    
+    Only profile fields should be updated. Password and email changes
+    require separate endpoints with proper verification.
+    """
+
+    full_name: str | None = None
+    avatar_url: str | None = None
+    phone_number: str | None = None
+    ward_code: str | None = None
+    address_detail: str | None = None
+
+
+class UserProfileUpdate(schemas.BaseModel):
+    """Schema for updating user profile only.
+    
+    This is used for the dedicated /users/me/profile endpoint
+    and only includes safe profile fields.
+    """
+
+    full_name: str | None = None
+    avatar_url: str | None = None
+    phone_number: str | None = None
+    ward_code: str | None = None
+    address_detail: str | None = None
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
