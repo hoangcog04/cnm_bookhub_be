@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import UJSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from cnm_bookhub_be.web.api.router import api_router
 from cnm_bookhub_be.web.lifespan import lifespan_setup
@@ -22,8 +23,22 @@ def get_app() -> FastAPI:
         default_response_class=UJSONResponse,
     )
 
+    # Configure CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:8080",
+            "http://127.0.0.1:8080",
+            "http://localhost:3000",  # For development
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     # Main router for the API.
     app.include_router(router=api_router, prefix="/api")
 
     return app
 app = get_app()
+
