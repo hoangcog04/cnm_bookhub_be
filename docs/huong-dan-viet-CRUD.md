@@ -420,4 +420,318 @@ Dựa vào models đã có, bạn có thể tạo CRUD cho:
 - 📝 `wards` - Cần tạo
 - 📝 `social_accounts` - Cần tạo
 
+---
+
+## CRUD cho nhiều tables có relationship
+
+Khi làm việc với các tables có quan hệ với nhau (relationships), bạn cần xử lý thêm một số vấn đề:
+
+### 1. Eager Loading vs Lazy Loading
+
+**Vấn đề**: Khi query một entity có relationship, SQLAlchemy mặc định sử dụng **lazy loading** - không load dữ liệu của relationships cho đến khi bạn truy cập vào chúng.
+
+**Giải pháp**: Sử dụng **eager loading** với `selectinload()` để load relationships cùng lúc.
+
+#### Ví dụ: Lấy Orders với Order Items
+
+**Model relationships** (đã có):
+```python
+# orders.py
+class Order(Base):
+    order_items: Mapped[list["OrderItem"]] = relationship(
+        "OrderItem", back_populates="order"
+    )
+
+# order_items.py
+class OrderItem(Base):
+    order: Mapped["Order"] = relationship("Order", back_populates="order_items")
+    book: Mapped["Book"] = relationship("Book", back_populates="order_items")
+```
+
+**DAO với eager loading**:
+```python
+# order_dao.py
+from sqlalchemy.orm import selectinload
+
+async def get_order_with_items(self, order_id: uuid.UUID) -> Order | None:
+    """Get order with all order items and book details."""
+    result = await self.session.execute(
+        select(Order)
+        .where(Order.id == order_id)
+        .options(
+            selectinload(Order.order_items).selectinload(OrderItem.book)
+        )
+    )
+    return result.scalar_one_or_none()
+```
+
+**Giải thích**:
+- `selectinload(Order.order_items)`: Load tất cả order_items của order
+- `.selectinload(OrderItem.book)`: Tiếp tục load thông tin book cho mỗi order_item
+- Kết quả: 1 query cho Order, 1 query cho OrderItems, 1 query cho Books (thay vì N+1 queries)
+
+### 2. Nested Schemas cho Relationships
+
+Khi trả về data có relationships, bạn cần tạo **nested schemas**:
+
+```python
+# web/api/orders/schema.py
+from pydantic import BaseModel, ConfigDict
+import uuid
+
+# Schema cơ bản cho Book
+class BookInfoDTO(BaseModel):
+    """Basic book info for order items."""
+    id: uuid.UUID
+    title: str
+    price: float
+    model_config = ConfigDict(from_attributes=True)
+
+# Schema cho OrderItem có chứa Book
+class OrderItemWithBookDTO(BaseModel):
+    """Order item with book details."""
+    id: uuid.UUID
+    book_id: uuid.UUID
+    quantity: int
+    price_at_purchase: float
+    book: BookInfoDTO  # ← Nested schema
+    model_config = ConfigDict(from_attributes=True)
+
+# Schema cho Order có chứa OrderItems
+class OrderWithItemsDTO(BaseModel):
+    """Order with all order items and book info."""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    status: str
+    address_at_purchase: str
+    order_items: list[OrderItemWithBookDTO]  # ← Nested list
+    model_config = ConfigDict(from_attributes=True)
+```
+
+**API endpoint**:
+```python
+@router.get("/{order_id}", response_model=OrderWithItemsDTO)
+async def get_order_detail(
+    order_id: uuid.UUID,
+    order_dao: OrderDAO = Depends(),
+) -> Order:
+    """Get order with all items and book details."""
+    order = await order_dao.get_order_with_items(order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return order
+```
+
+### 3. Tạo dữ liệu cho nhiều tables (Transaction)
+
+Khi tạo Order mới, bạn thường cần tạo cả Order và OrderItems cùng lúc:
+
+```python
+# order_dao.py
+async def create_order_with_items(
+    self,
+    user_id: uuid.UUID,
+    status: str,
+    address: str,
+    items: list[dict],  # [{"book_id": ..., "quantity": ..., "price": ...}]
+) -> Order:
+    """Create order with order items in a single transaction."""
+    try:
+        # Tạo Order
+        order = Order(
+            user_id=user_id,
+            status=status,
+            address_at_purchase=address,
+        )
+        self.session.add(order)
+        await self.session.flush()  # ← Flush để có order.id
+        
+        # Tạo OrderItems
+        for item_data in items:
+            order_item = OrderItem(
+                order_id=order.id,  # Sử dụng order.id vừa tạo
+                book_id=item_data["book_id"],
+                quantity=item_data["quantity"],
+                price_at_purchase=item_data["price"],
+            )
+            self.session.add(order_item)
+        
+        await self.session.commit()  # ← Commit tất cả
+        await self.session.refresh(order)
+        return order
+        
+    except Exception as e:
+        await self.session.rollback()  # ← Rollback nếu có lỗi
+        raise e
+```
+
+**Schema cho create**:
+```python
+class OrderItemCreateDTO(BaseModel):
+    book_id: uuid.UUID
+    quantity: int
+    price_at_purchase: float
+
+class OrderCreateWithItemsDTO(BaseModel):
+    user_id: uuid.UUID
+    status: str
+    address_at_purchase: str
+    items: list[OrderItemCreateDTO]  # ← List các items
+```
+
+**API endpoint**:
+```python
+@router.post("/", response_model=OrderWithItemsDTO, status_code=201)
+async def create_order_with_items(
+    order_data: OrderCreateWithItemsDTO,
+    order_dao: OrderDAO = Depends(),
+) -> Order:
+    """Create order with order items."""
+    items = [item.model_dump() for item in order_data.items]
+    return await order_dao.create_order_with_items(
+        user_id=order_data.user_id,
+        status=order_data.status,
+        address=order_data.address_at_purchase,
+        items=items,
+    )
+```
+
+### 4. Xóa dữ liệu có relationship (Cascade Delete)
+
+Khi xóa Order, bạn có 2 options:
+
+#### Option 1: Cascade delete trong Model (Recommended)
+```python
+# models/orders.py
+class Order(Base):
+    order_items: Mapped[list["OrderItem"]] = relationship(
+        "OrderItem", 
+        back_populates="order",
+        cascade="all, delete-orphan"  # ← Tự động xóa order_items
+    )
+```
+
+Khi xóa Order, tất cả OrderItems sẽ tự động bị xóa:
+```python
+async def delete_order(self, order_id: uuid.UUID) -> bool:
+    order = await self.get_order_by_id(order_id)
+    if order is None:
+        return False
+    
+    await self.session.delete(order)  # OrderItems tự động bị xóa
+    await self.session.commit()
+    return True
+```
+
+#### Option 2: Manual delete trong DAO
+```python
+async def delete_order_with_items(self, order_id: uuid.UUID) -> bool:
+    order = await self.get_order_by_id(order_id)
+    if order is None:
+        return False
+    
+    # Xóa tất cả order items trước
+    await self.session.execute(
+        delete(OrderItem).where(OrderItem.order_id == order_id)
+    )
+    
+    # Sau đó xóa order
+    await self.session.delete(order)
+    await self.session.commit()
+    return True
+```
+
+### 5. Filter theo Relationship
+
+Lấy tất cả Orders của một User cụ thể:
+
+```python
+# order_dao.py
+async def get_orders_by_user(
+    self,
+    user_id: uuid.UUID,
+    limit: int = 10,
+    offset: int = 0,
+) -> list[Order]:
+    """Get all orders of a specific user with order items."""
+    result = await self.session.execute(
+        select(Order)
+        .where(Order.user_id == user_id)  # ← Filter by foreign key
+        .options(selectinload(Order.order_items))
+        .order_by(Order.created_at.desc())  # Mới nhất trước
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result.scalars().fetchall())
+```
+
+### 6. Join Queries
+
+Lấy Orders kèm theo thông tin User:
+
+```python
+from sqlalchemy.orm import joinedload
+
+async def get_order_with_user_info(self, order_id: uuid.UUID) -> Order | None:
+    """Get order with user information."""
+    result = await self.session.execute(
+        select(Order)
+        .where(Order.id == order_id)
+        .options(
+            joinedload(Order.user),  # ← Join với User
+            selectinload(Order.order_items).selectinload(OrderItem.book)
+        )
+    )
+    return result.scalar_one_or_none()
+```
+
+**Schema with user info**:
+```python
+class UserBasicDTO(BaseModel):
+    id: uuid.UUID
+    email: str
+    full_name: str | None
+    model_config = ConfigDict(from_attributes=True)
+
+class OrderWithUserDTO(BaseModel):
+    id: uuid.UUID
+    status: str
+    address_at_purchase: str
+    user: UserBasicDTO  # ← Nested user info
+    order_items: list[OrderItemWithBookDTO]
+    model_config = ConfigDict(from_attributes=True)
+```
+
+### 7. Best Practices cho Relationships
+
+1. **Sử dụng `selectinload()`** thay vì `joinedload()` cho **one-to-many** relationships
+2. **Sử dụng `joinedload()`** cho **many-to-one** relationships (như Order → User)
+3. **Luôn xử lý transactions** khi tạo/cập nhật nhiều tables
+4. **Định nghĩa cascade** trong models để tránh orphan records
+5. **Tạo indexes** cho foreign keys để tăng performance
+6. **Sử dụng `flush()`** khi cần ID của record vừa tạo để insert vào table khác
+7. **Validate foreign keys** trước khi insert (check book_id, user_id có tồn tại không)
+
+### 8. Ví dụ hoàn chỉnh: User Order History
+
+**endpoint**: `GET /users/me/history_order`
+
+```python
+# web/api/users/views.py
+@router.get("/users/me/history_order", response_model=list[OrderWithItemsDTO])
+async def get_my_order_history(
+    user: User = Depends(current_active_user),
+    order_dao: OrderDAO = Depends(),
+) -> list[Order]:
+    """Get current user's order history."""
+    return await order_dao.get_orders_by_user(user.id)
+```
+
+Endpoint này sẽ trả về:
+- Tất cả orders của user đang login
+- Mỗi order có list order_items
+- Mỗi order_item có thông tin book chi tiết
+
+---
+
 Hãy bắt đầu với entity đơn giản như `categories` hoặc `books` để làm quen với quy trình! 🚀

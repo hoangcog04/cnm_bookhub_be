@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cnm_bookhub_be.db.dependencies import get_db_session
 from cnm_bookhub_be.db.models.orders import Order
+from cnm_bookhub_be.db.models.order_items import OrderItem
 from datetime import datetime, timezone
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 
 class OrderDAO:
@@ -102,3 +104,34 @@ class OrderDAO:
 
         await self.session.commit()
         return True
+    
+    
+    async def get_history_order(self, user_id: uuid.UUID) -> list[Order] | None:
+        results = await self.session.execute(
+            select(Order)
+            .where(Order.user_id == user_id)
+            .options(
+                selectinload(Order.order_items).
+                selectinload(OrderItem.book)
+            )
+            .order_by(Order.created_at.desc())
+        )
+        return list(results.unique().scalars().fetchall())
+
+    async def get_orders_by_user_and_status(
+        self,
+        user_id: uuid.UUID,
+        status: str,
+    ) -> list[Order]:
+        """Get all orders for a specific user filtered by status."""
+        results = await self.session.execute(
+            select(Order)
+            .where(Order.user_id == user_id, Order.status == status)
+            .options(
+                selectinload(Order.order_items).
+                selectinload(OrderItem.book)
+            )
+            .order_by(Order.created_at.desc())
+        )
+        return list(results.unique().scalars().fetchall())
+
