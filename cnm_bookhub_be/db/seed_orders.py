@@ -1,7 +1,6 @@
 """Seed script to populate orders and order items for testing."""
 
 import asyncio
-import uuid
 from datetime import datetime, timedelta
 
 from sqlalchemy import select
@@ -10,7 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from cnm_bookhub_be.db.models import load_all_models
 from cnm_bookhub_be.db.models.books import Book
 from cnm_bookhub_be.db.models.order_items import OrderItem
-from cnm_bookhub_be.db.models.orders import Order
+from cnm_bookhub_be.db.models.orders import Order, OrderStatus
 from cnm_bookhub_be.db.models.users import User
 from cnm_bookhub_be.settings import settings
 
@@ -68,7 +67,7 @@ async def seed_orders() -> None:
             if not existing_order:
                 order1 = Order(
                     user_id=user.id,
-                    status="completed",
+                    status=OrderStatus.COMPLETED.value,
                     address_at_purchase="123 Nguyen Hue, District 1, Ho Chi Minh City",
                 )
                 session.add(order1)
@@ -79,13 +78,13 @@ async def seed_orders() -> None:
                     order_id=order1.id,
                     book_id=books[0].id,
                     quantity=2,
-                    price_at_purchase=float(books[0].price),
+                    price_at_purchase=books[0].price,
                 )
                 order1_item2 = OrderItem(
                     order_id=order1.id,
                     book_id=books[1].id,
                     quantity=1,
-                    price_at_purchase=float(books[1].price),
+                    price_at_purchase=books[1].price,
                 )
                 session.add(order1_item1)
                 session.add(order1_item2)
@@ -95,7 +94,7 @@ async def seed_orders() -> None:
                 # Order 2: Pending order from 3 days ago
                 order2 = Order(
                     user_id=user.id,
-                    status="pending",
+                    status=OrderStatus.PENDING.value,
                     address_at_purchase="456 Le Loi, District 3, Ho Chi Minh City",
                 )
                 session.add(order2)
@@ -106,19 +105,19 @@ async def seed_orders() -> None:
                     order_id=order2.id,
                     book_id=books[2].id,
                     quantity=1,
-                    price_at_purchase=float(books[2].price),
+                    price_at_purchase=books[2].price,
                 )
                 order2_item2 = OrderItem(
                     order_id=order2.id,
                     book_id=books[3].id,
                     quantity=2,
-                    price_at_purchase=float(books[3].price),
+                    price_at_purchase=books[3].price,
                 )
                 order2_item3 = OrderItem(
                     order_id=order2.id,
                     book_id=books[4].id,
                     quantity=1,
-                    price_at_purchase=float(books[4].price),
+                    price_at_purchase=books[4].price,
                 )
                 session.add(order2_item1)
                 session.add(order2_item2)
@@ -129,7 +128,7 @@ async def seed_orders() -> None:
                 # Order 3: Shipped order from 5 days ago
                 order3 = Order(
                     user_id=user.id,
-                    status="shipped",
+                    status=OrderStatus.COMPLETED.value,
                     address_at_purchase="789 Tran Hung Dao, District 5, Ho Chi Minh City",
                 )
                 session.add(order3)
@@ -140,7 +139,7 @@ async def seed_orders() -> None:
                     order_id=order3.id,
                     book_id=books[0].id,
                     quantity=3,
-                    price_at_purchase=float(books[0].price),
+                    price_at_purchase=books[0].price,
                 )
                 session.add(order3_item1)
                 print(f"   ✓ Order 3: {order3.status} - 1 item")  # noqa: T201

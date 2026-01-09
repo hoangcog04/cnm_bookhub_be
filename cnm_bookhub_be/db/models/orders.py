@@ -1,7 +1,8 @@
 import uuid
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cnm_bookhub_be.db.base import Base
@@ -11,9 +12,15 @@ if TYPE_CHECKING:
     from cnm_bookhub_be.db.models.users import User
 
 
-class Order(Base):
-    """Represents an order entity."""
+class OrderStatus(StrEnum):
+    PENDING = "pending"  # wait for stripe
+    REQUIRE_PAYMENT = "require_payment"  # wait for stripe webhook
+    CANCELLED = "cancelled"  # cancelled by user or admin
+    CHARGED = "charged"  # after stripe webhook
+    COMPLETED = "completed"  # after delivery
 
+
+class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -21,8 +28,12 @@ class Order(Base):
         ForeignKey("users.id"),
         nullable=False,
     )
-    status: Mapped[str] = mapped_column(String(length=50), nullable=False)
+    status: Mapped[OrderStatus] = mapped_column(
+        Enum(OrderStatus, native_enum=False, length=50), nullable=False
+    )
     address_at_purchase: Mapped[str] = mapped_column(Text, nullable=False)
+    payment_intent_id: Mapped[str] = mapped_column(String(length=255), nullable=True)
+    total_price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="orders")

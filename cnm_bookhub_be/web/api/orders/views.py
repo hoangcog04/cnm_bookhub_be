@@ -4,9 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from cnm_bookhub_be.db.dao.order_dao import OrderDAO
 from cnm_bookhub_be.db.models.orders import Order
+from cnm_bookhub_be.db.models.users import User, current_active_user
+from cnm_bookhub_be.services.stripe_service import stripe_service
 from cnm_bookhub_be.web.api.orders.schema import (
-    OrderDTO,
     OrderCreateDTO,
+    OrderDTO,
+    OrderHistoryResp,
+    OrderReq,
+    OrderResp,
     OrderUpdateDTO,
 )
 
@@ -21,6 +26,14 @@ async def get_orders(
 ) -> list[Order]:
     """Get all orders."""
     return await order_dao.get_all_orders(limit=limit, offset=offset)
+
+
+@router.get("/history", response_model=list[OrderHistoryResp])
+async def get_order_history(
+    user: User = Depends(current_active_user),
+    order_dao: OrderDAO = Depends(),
+) -> list[OrderHistoryResp]:
+    return await order_dao.get_order_history(user.id)
 
 
 @router.get("/{order_id}", response_model=OrderDTO)
@@ -83,6 +96,8 @@ async def delete_order(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found",
         )
+
+
 @router.post("/{order_id}/soft-delete", status_code=status.HTTP_204_NO_CONTENT)
 async def soft_delete_order(
     order_id: uuid.UUID,
@@ -94,3 +109,24 @@ async def soft_delete_order(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found",
         )
+
+
+@router.post("/request-order", status_code=status.HTTP_200_OK, response_model=OrderResp)
+async def request_order(
+    order_request: OrderReq,
+    user: User = Depends(current_active_user),
+    order_dao: OrderDAO = Depends(),
+) -> OrderResp:
+    user_id = user.id
+
+    order, total_price = await order_dao.create_pending_order(user_id, order_request)
+    payment_intent = await stripe_service.create_payment_intent(
+        amount=total_price,
+        currency="vnd",
+    )
+    await order_dao.update_payment_intent_id(order.id, payment_intent.id)
+
+    return OrderResp(
+        id=order.id,
+        payment_intent_id=payment_intent.client_secret or "",
+    )
