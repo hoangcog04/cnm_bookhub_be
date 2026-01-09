@@ -16,16 +16,13 @@ from cnm_bookhub_be.db.models.users import (
     auth_jwt,  # type: ignore
     current_active_user,  # type: ignore
 )
-<<<<<<< HEAD
 from cnm_bookhub_be.services.oauth_service import (
     github_oauth_client,
     google_oauth_client,
 )
 from cnm_bookhub_be.settings import settings
 from cnm_bookhub_be.web.api.orders.schema import OrderHistoryDTO
-=======
 from cnm_bookhub_be.web.api.users.custom_oauth import get_custom_oauth_router
->>>>>>> e1f8037 (Social_Login: connect Google and GitHub social login for frontend)
 
 router = APIRouter()
 
