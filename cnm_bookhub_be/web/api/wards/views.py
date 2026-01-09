@@ -6,16 +6,11 @@ from cnm_bookhub_be.web.api.wards.schema import WardDTO
 
 router = APIRouter()
 
-#GET Wards by province_code
-@router.get("/{province_code}", response_model=list[WardDTO])
+# GET Wards with optional province filter and search
+@router.get("/", response_model=list[WardDTO])
 async def get_wards(
-    province_code: str,
+    province_code: str | None = None,
+    search: str | None = None,
     dao: WardDAO = Depends(),
 ) -> list[Ward]:
-    items = await dao.get_ward_by_province_code(province_code)
-    if items is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Province not found"
-        )
-    return items
+    return await dao.get_all_wards(province_code=province_code, search=search)
