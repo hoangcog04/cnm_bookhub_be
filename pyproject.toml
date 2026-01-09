@@ -26,6 +26,7 @@ dependencies = [
   "cloudinary >=1.41.0,<2",
   "fastapi-mail>=1.6.1",
   "sendgrid>=6.12.5",
+  "stripe>=14.1.0",
 ]
 
 [dependency-groups]
@@ -109,6 +110,7 @@ lint.select = [ "E",     # Error
 	"UP",	 # Python updates
 ]
 lint.ignore = [
+    "ERA001",
     "D101",
     "D102",
     "D103",
