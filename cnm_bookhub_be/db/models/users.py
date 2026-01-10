@@ -17,6 +17,13 @@ from cnm_bookhub_be.db.models.oauth_account import OAuthAccount
 from cnm_bookhub_be.db.base import Base
 from cnm_bookhub_be.db.dependencies import get_db_session
 from cnm_bookhub_be.settings import settings
+from fastapi import Request
+from cnm_bookhub_be.services.otp_service import OTPService
+from cnm_bookhub_be.services.email_service import (
+    email_service, 
+    TEMPLATE_LINK_VERIFICATION_NAME,
+    TEMPLATE_RESET_PASSWORD_NAME
+)
 
 if TYPE_CHECKING:
     from cnm_bookhub_be.db.models.orders import Order
@@ -68,6 +75,62 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
     reset_password_token_secret = settings.users_secret
     verification_token_secret = settings.users_secret
+
+    async def on_after_register(self, user: User, request: Request | None = None) -> None:
+        print(f"User {user.id} has registered.")
+        # Send OTP
+        # We need a session to potentialy save the OTP. 
+        # The user_db has a session.
+        session = self.user_db.session
+        otp_service = OTPService(session)
+        print(f"Sending OTP for {user.email}")
+        await otp_service.generate_otp(user.email)
+
+        # Trigger link verification flow
+        print(f"Requesting verify for {user.email}")
+        # This will call on_after_request_verify with the token
+        await self.request_verify(user, request)
+
+    async def on_after_request_verify(
+        self, user: User, token: str, request: Request | None = None
+    ) -> None:
+        print(f"Sending Verification Link for {user.email}")
+        # Construct the verification URL
+        # For local dev, we assume localhost:3000 (Frontend) or backend URL if just testing API
+        # Let's point to the backend verify endpoint for now or a frontend route
+        # Since user asked about "clicking link", usually it goes to FE. 
+        # But if no FE, let's point to a backend dummy or just print it.
+        # Assuming we want to verify via GET request (which fastapi-users supports)
+        # OR we point to a FE page that grabs the token and POSTs to backend.
+        
+        # Let's generate a full URL. 
+        verify_url = f"http://localhost:8000/api/auth/verify?token={token}"
+        
+        await email_service.send_email(
+            template_name=TEMPLATE_LINK_VERIFICATION_NAME,
+            to_email=user.email,
+            subject="Verify your account",
+            template_body={"verify_url": verify_url, "email": user.email, "username": user.email},
+        await email_service.send_email(
+            template_name=TEMPLATE_LINK_VERIFICATION_NAME,
+            to_email=user.email,
+            subject="Verify your account",
+            template_body={"verify_url": verify_url, "email": user.email, "username": user.email},
+        ) 
+
+    async def on_after_forgot_password(
+        self, user: User, token: str, request: Request | None = None
+    ) -> None:
+        print(f"User {user.id} has forgot their password.")
+        # Construct reset password URL
+        reset_url = f"http://localhost:8000/reset-password?token={token}"
+        
+        await email_service.send_email(
+            template_name=TEMPLATE_RESET_PASSWORD_NAME,
+            to_email=user.email,
+            subject="Reset your password",
+            template_body={"reset_url": reset_url, "email": user.email, "username": user.email},
+        ) 
 
 
 async def get_user_db(

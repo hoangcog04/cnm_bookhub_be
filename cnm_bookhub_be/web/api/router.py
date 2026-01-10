@@ -13,6 +13,7 @@ from cnm_bookhub_be.web.api import (
     test_mail,
     users,
     wards,
+    otp,
 )
 
 api_router = APIRouter()
@@ -30,3 +31,4 @@ api_router.include_router(
 )
 api_router.include_router(books.router, prefix="/books", tags=["books"])
 api_router.include_router(test_mail.router, prefix="/mail", tags=["mail"])
+api_router.include_router(otp.router, prefix="/otp", tags=["otp"])
