@@ -12,13 +12,17 @@ from cnm_bookhub_be.settings import settings
 
 TEMPLATE_OTP_NAME = "OTP_MAIL"
 TEMPLATE_LINK_VERIFICATION_NAME = "LINK_VERIFICATION_MAIL"
+TEMPLATE_RESET_PASSWORD_NAME = "RESET_PASSWORD_MAIL"
+
 _mailpit_templates = {
     TEMPLATE_OTP_NAME: "otp_mail.html",
     TEMPLATE_LINK_VERIFICATION_NAME: "link_verification_mail.html",
+    TEMPLATE_RESET_PASSWORD_NAME: "reset_password_mail.html",
 }
 _sendgrid_templates = {
     TEMPLATE_OTP_NAME: "d-7a9e94e48a304cbdaccbf6053c988c3f",
     TEMPLATE_LINK_VERIFICATION_NAME: "d-29030853d30f4c6486ca255508583083",
+    TEMPLATE_RESET_PASSWORD_NAME: "", # Placeholder for Sendgrid
 }
 
 

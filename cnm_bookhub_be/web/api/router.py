@@ -13,6 +13,7 @@ from cnm_bookhub_be.web.api import (
     test_mail,
     users,
     wards,
+    otp,
     carts,
 )
 
@@ -32,3 +33,4 @@ api_router.include_router(carts.router, prefix="/cart", tags=["cart"])
 
 
 api_router.include_router(test_mail.router, prefix="/mail", tags=["mail"])
+api_router.include_router(otp.router, prefix="/otp", tags=["otp"])
