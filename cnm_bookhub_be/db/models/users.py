@@ -111,11 +111,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             to_email=user.email,
             subject="Verify your account",
             template_body={"verify_url": verify_url, "email": user.email, "username": user.email},
-        await email_service.send_email(
-            template_name=TEMPLATE_LINK_VERIFICATION_NAME,
-            to_email=user.email,
-            subject="Verify your account",
-            template_body={"verify_url": verify_url, "email": user.email, "username": user.email},
         ) 
 
     async def on_after_forgot_password(
