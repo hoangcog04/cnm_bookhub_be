@@ -1,4 +1,5 @@
 import uuid
+
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +18,7 @@ class BookDAO:
         self,
         title: str,
         author: str,
-        price: float,
+        price: int,
         stock: int,
         image_urls: str | None,
         description: str | None,
@@ -45,10 +46,7 @@ class BookDAO:
         offset: int,
     ) -> list[Book]:
         result = await self.session.execute(
-            select(Book)
-            .where(Book.deleted.is_(False))
-            .limit(limit)
-            .offset(offset),
+            select(Book).where(Book.deleted.is_(False)).limit(limit).offset(offset),
         )
         return list(result.scalars().all())
 

@@ -8,11 +8,10 @@ from cnm_bookhub_be.web.api.provinces.schema import ProvinceDTO
 router = APIRouter()
 
 
-# GET ALL
+# GET ALL with optional search
 @router.get("/", response_model=list[ProvinceDTO])
 async def get_provinces(
-    limit: int = 10,
-    offset: int = 0,
+    search: str | None = None,
     dao: ProvinceDAO = Depends(),
 ) -> list[Province]:
-    return await dao.get_all_province(limit=limit, offset=offset)
+    return await dao.get_all_province(search=search)

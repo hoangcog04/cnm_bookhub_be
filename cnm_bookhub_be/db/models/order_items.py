@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Float, ForeignKey, Integer
+from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cnm_bookhub_be.db.base import Base
@@ -26,7 +26,7 @@ class OrderItem(Base):
         nullable=False,
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    price_at_purchase: Mapped[float] = mapped_column(Float, nullable=False)
+    price_at_purchase: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Relationships
     order: Mapped["Order"] = relationship("Order", back_populates="order_items")

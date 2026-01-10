@@ -9,9 +9,11 @@ class ProvinceDAO:
         self.session = session
         
     #GET ALL
-    async def get_all_province(self, limit: int, offset: int) -> list[Province]:
-        raw_items = await self.session.execute(
-            select(Province).limit(limit).offset(offset),
-        )
-        return list(raw_items.scalars().fetchall())
+    async def get_all_province(self, search: str | None = None) -> list[Province]:
+        query = select(Province)
         
+        if search:
+            query = query.where(Province.name.ilike(f"%{search}%"))
+        
+        raw_items = await self.session.execute(query)
+        return list(raw_items.scalars().fetchall())

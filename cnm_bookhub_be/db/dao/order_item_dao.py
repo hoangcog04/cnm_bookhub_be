@@ -1,10 +1,12 @@
 import uuid
+
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cnm_bookhub_be.db.dependencies import get_db_session
 from cnm_bookhub_be.db.models.order_items import OrderItem
+
 
 class OrderItemDAO:
     """DAO for order_items table."""
@@ -17,7 +19,7 @@ class OrderItemDAO:
         order_id: uuid.UUID,
         book_id: uuid.UUID,
         quantity: int,
-        price_at_purchase: float,
+        price_at_purchase: int,
     ) -> None:
         self.session.add(
             OrderItem(
@@ -60,7 +62,7 @@ class OrderItemDAO:
         self,
         order_item_id: uuid.UUID,
         quantity: int | None = None,
-        price_at_purchase: float | None = None,
+        price_at_purchase: int | None = None,
     ) -> OrderItem | None:
         order_item = await self.get_order_item_by_id(order_item_id)
         if order_item is None:
@@ -86,7 +88,7 @@ class OrderItemDAO:
         await self.session.delete(order_item)
         await self.session.commit()
         return True
-    
+
     async def soft_delete_order_item(
         self,
         order_item_id: uuid.UUID,
