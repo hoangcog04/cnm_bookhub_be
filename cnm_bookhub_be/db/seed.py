@@ -83,7 +83,7 @@ async def seed_data() -> None:  # noqa: PLR0915
             result = await session.execute(
                 select(User).where(User.email == "admin@example.com")  # type: ignore
             )
-            existing_user = result.scalar_one_or_none()
+            existing_user = result.unique().scalar_one_or_none()
 
             if existing_user:
                 print("Superuser already exists, skipping...")  # noqa: T201
