@@ -12,11 +12,12 @@ class OrderItemReq(BaseModel):
 
 
 class OrderReq(BaseModel):
-    address_at_purchase: str
+    payment_method: str  # cod, online
     order_items: list[OrderItemReq]
 
 
 class OrderResp(BaseModel):
+    payment_method: str  # cod, online
     id: uuid.UUID
     payment_intent_id: str
 
@@ -55,6 +56,43 @@ class OrderDTO(BaseModel):
     user_id: uuid.UUID
     status: str
     address_at_purchase: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderItemDetailsResp(BaseModel):
+    id: uuid.UUID
+    book_id: uuid.UUID
+    title: str
+    author: str
+    price: int
+    quantity: int
+    subtotal: int
+    image_urls: str | None
+
+
+class ShippingInfoResp(BaseModel):
+    recipient_name: str | None
+    phone_number: str | None
+    address: str
+
+
+class OrderStatusResp(BaseModel):
+    id: uuid.UUID
+    status: str
+    address_at_purchase: str
+    payment_method: str
+    total_price: int
+
+
+class OrderDetailsResp(BaseModel):
+    id: uuid.UUID
+    status: str
+    created_at: datetime
+    payment_method: str
+    order_items: list[OrderItemDetailsResp]
+    shipping_info: ShippingInfoResp
+    total_price: int
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -2,6 +2,7 @@ from fastapi.routing import APIRouter
 
 from cnm_bookhub_be.web.api import (
     books,
+    carts,
     categories,
     dummy,
     echo,
@@ -9,12 +10,11 @@ from cnm_bookhub_be.web.api import (
     monitoring,
     order_items,
     orders,
+    otp,
     provinces,
     test_mail,
     users,
     wards,
-    otp,
-    carts,
 )
 
 api_router = APIRouter()
@@ -27,9 +27,11 @@ api_router.include_router(categories.router, prefix="/category", tags=["category
 api_router.include_router(provinces.router, prefix="/province", tags=["province"])
 api_router.include_router(wards.router, prefix="/ward", tags=["ward"])
 api_router.include_router(orders.router, prefix="/orders", tags=["orders"])
-api_router.include_router(order_items.router, prefix="/order-items", tags=["order-items"])
-api_router.include_router(books.router,prefix="/books",tags=["books"])       
-api_router.include_router(carts.router, prefix="/cart", tags=["cart"])       
+api_router.include_router(
+    order_items.router, prefix="/order-items", tags=["order-items"]
+)
+api_router.include_router(books.router, prefix="/books", tags=["books"])
+api_router.include_router(carts.router, prefix="/cart", tags=["cart"])
 
 
 api_router.include_router(test_mail.router, prefix="/mail", tags=["mail"])

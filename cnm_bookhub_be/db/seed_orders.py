@@ -94,7 +94,7 @@ async def seed_orders() -> None:
                 # Order 2: Pending order from 3 days ago
                 order2 = Order(
                     user_id=user.id,
-                    status=OrderStatus.PENDING.value,
+                    status=OrderStatus.WAITING_FOR_CONFIRMATION.value,
                     address_at_purchase="456 Le Loi, District 3, Ho Chi Minh City",
                 )
                 session.add(order2)

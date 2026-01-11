@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,11 +12,16 @@ from cnm_bookhub_be.db.models.order_items import OrderItem
 from cnm_bookhub_be.db.models.orders import Order, OrderStatus
 from cnm_bookhub_be.db.models.provinces import Province
 from cnm_bookhub_be.db.models.users import User
+from cnm_bookhub_be.db.models.wards import Ward
 from cnm_bookhub_be.web.api.orders.schema import (
     BookInfoHistoryResp,
+    OrderDetailsResp,
     OrderHistoryResp,
+    OrderItemDetailsResp,
     OrderItemHistoryResp,
     OrderReq,
+    OrderStatusResp,
+    ShippingInfoResp,
 )
 
 
@@ -117,10 +122,16 @@ class OrderDAO:
 
     async def create_pending_order(
         self,
-        user_id: uuid.UUID,
+        user: User,
         order_request: OrderReq,
+        payment_method: str,
     ) -> tuple[Order, int]:
         req_order_items = order_request.order_items
+
+        if payment_method == "online":
+            order_status = OrderStatus.REQUIRE_PAYMENT
+        else:
+            order_status = OrderStatus.WAITING_FOR_CONFIRMATION
 
         req_book_ids = [req_order_item.book_id for req_order_item in req_order_items]
         results = await self.session.execute(
@@ -137,12 +148,25 @@ class OrderDAO:
             quantity = req_order_item_quantities[book.id]
             total_price += book.price * quantity
 
+        result = await self.session.execute(
+            select(Ward)
+            .where(Ward.code == user.ward_code)
+            .options(selectinload(Ward.province)),
+        )
+        ward = result.scalar_one_or_none()
+        if ward is None:
+            raise HTTPException(status_code=400, detail="Địa chỉ không hợp lệ")
+
+        address_at_purchase = (
+            f"{user.address_detail}, {ward.full_name}, {ward.province.full_name}"
+        )
         order = Order(
-            user_id=user_id,
-            status=OrderStatus.PENDING.value,
-            address_at_purchase=order_request.address_at_purchase,
+            user_id=user.id,
+            status=order_status,
+            address_at_purchase=address_at_purchase,
             total_price=total_price,
         )
+
         self.session.add(order)
         await self.session.flush()
 
@@ -174,13 +198,12 @@ class OrderDAO:
             return False
 
         order.payment_intent_id = payment_intent_id
-        order.status = OrderStatus.REQUIRE_PAYMENT
 
         await self.session.commit()
 
         return True
 
-    async def mark_order_as_processed(self, payment_intent_id: str) -> bool:
+    async def mask_order_as_charged(self, payment_intent_id: str) -> bool:
         result = await self.session.execute(
             select(Order).where(Order.payment_intent_id == payment_intent_id),
         )
@@ -189,7 +212,33 @@ class OrderDAO:
         if order is None:
             return False
 
-        order.status = OrderStatus.CHARGED
+        order.status = OrderStatus.WAITING_FOR_CONFIRMATION
+
+        await self.session.commit()
+
+        return True
+
+    async def mask_order_status(self, order_id: uuid.UUID, status: OrderStatus) -> bool:
+        if status not in [
+            OrderStatus.WAITING_FOR_CONFIRMATION,
+            OrderStatus.DELIVERY_IN_PROGRESS,
+        ]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+
+        result = await self.session.execute(
+            select(Order).where(Order.id == order_id),
+        )
+        order = result.scalar_one_or_none()
+        if order is None:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        order_status = order.status
+        if order_status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
+            raise HTTPException(
+                status_code=400, detail="Order is already completed or cancelled"
+            )
+
+        order.status = status
 
         await self.session.commit()
 
@@ -238,3 +287,65 @@ class OrderDAO:
             order_history_list.append(order_history)
 
         return order_history_list
+
+    async def get_order_details(self, order_id: uuid.UUID) -> OrderDetailsResp | None:
+        result = await self.session.execute(
+            select(Order)
+            .where(Order.id == order_id)
+            .options(
+                selectinload(Order.order_items).selectinload(OrderItem.book),
+                selectinload(Order.user),
+            )
+        )
+        order = result.unique().scalar_one_or_none()
+
+        if order is None:
+            return None
+
+        payment_method = "online" if order.payment_intent_id else "cod"
+
+        order_items_details = []
+        for order_item in order.order_items:
+            subtotal = order_item.quantity * order_item.price_at_purchase
+            order_item_detail = OrderItemDetailsResp(
+                id=order_item.id,
+                book_id=order_item.book_id,
+                title=order_item.book.title,
+                author=order_item.book.author,
+                price=order_item.price_at_purchase,
+                quantity=order_item.quantity,
+                subtotal=subtotal,
+                image_urls=order_item.book.image_urls,
+            )
+            order_items_details.append(order_item_detail)
+
+        shipping_info = ShippingInfoResp(
+            recipient_name=order.user.full_name,
+            phone_number=order.user.phone_number,
+            address=order.address_at_purchase,
+        )
+
+        return OrderDetailsResp(
+            id=order.id,
+            status=str(order.status),
+            created_at=order.created_at,
+            payment_method=payment_method,
+            order_items=order_items_details,
+            shipping_info=shipping_info,
+            total_price=order.total_price,
+        )
+
+    async def get_order_status(self, order_id: uuid.UUID) -> OrderStatusResp | None:
+        result = await self.session.execute(
+            select(Order).where(Order.id == order_id),
+        )
+        order = result.scalar_one_or_none()
+        if order is None:
+            return None
+        return OrderStatusResp(
+            id=order.id,
+            status=str(order.status),
+            address_at_purchase=order.address_at_purchase,
+            payment_method="online" if order.payment_intent_id else "cod",
+            total_price=order.total_price,
+        )

@@ -2,16 +2,19 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from cnm_bookhub_be.db.dao.cart_dao import CartDAO
 from cnm_bookhub_be.db.dao.order_dao import OrderDAO
 from cnm_bookhub_be.db.models.orders import Order
 from cnm_bookhub_be.db.models.users import User, current_active_user
 from cnm_bookhub_be.services.stripe_service import stripe_service
 from cnm_bookhub_be.web.api.orders.schema import (
     OrderCreateDTO,
+    OrderDetailsResp,
     OrderDTO,
     OrderHistoryResp,
     OrderReq,
     OrderResp,
+    OrderStatusResp,
     OrderUpdateDTO,
 )
 
@@ -36,19 +39,19 @@ async def get_order_history(
     return await order_dao.get_order_history(user.id)
 
 
-@router.get("/{order_id}", response_model=OrderDTO)
-async def get_order(
-    order_id: uuid.UUID,
-    order_dao: OrderDAO = Depends(),
-) -> Order:
-    """Get order by ID."""
-    order = await order_dao.get_order_by_id(order_id)
-    if order is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Order not found",
-        )
-    return order
+# @router.get("/{order_id}", response_model=OrderDTO)
+# async def get_order(
+#     order_id: uuid.UUID,
+#     order_dao: OrderDAO = Depends(),
+# ) -> Order:
+#     """Get order by ID."""
+#     order = await order_dao.get_order_by_id(order_id)
+#     if order is None:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Order not found",
+#         )
+#     return order
 
 
 @router.post("/", response_model=OrderDTO, status_code=status.HTTP_201_CREATED)
@@ -111,22 +114,66 @@ async def soft_delete_order(
         )
 
 
-@router.post("/request-order", status_code=status.HTTP_200_OK, response_model=OrderResp)
+@router.post(
+    "/request-order", status_code=status.HTTP_201_CREATED, response_model=OrderResp
+)
 async def request_order(
     order_request: OrderReq,
     user: User = Depends(current_active_user),
     order_dao: OrderDAO = Depends(),
+    cart_dao: CartDAO = Depends(),
 ) -> OrderResp:
-    user_id = user.id
+    payment_method = order_request.payment_method.lower()
 
-    order, total_price = await order_dao.create_pending_order(user_id, order_request)
-    payment_intent = await stripe_service.create_payment_intent(
-        amount=total_price,
-        currency="vnd",
+    order, total_price_for_payment = await order_dao.create_pending_order(
+        user, order_request, payment_method
     )
-    await order_dao.update_payment_intent_id(order.id, payment_intent.id)
+
+    payment_intent_id = ""
+    if payment_method == "online":
+        payment_intent = await stripe_service.create_payment_intent(
+            amount=total_price_for_payment,
+            currency="vnd",
+        )
+        await order_dao.update_payment_intent_id(order.id, payment_intent.id)
+        payment_intent_id = payment_intent.client_secret or ""
+
+    await cart_dao.clear_cart(user.id)
 
     return OrderResp(
+        payment_method=payment_method,
         id=order.id,
-        payment_intent_id=payment_intent.client_secret or "",
+        payment_intent_id=payment_intent_id,
     )
+
+
+@router.get(
+    "/{order_id}", status_code=status.HTTP_200_OK, response_model=OrderDetailsResp
+)
+async def get_order_details(
+    order_id: uuid.UUID,
+    order_dao: OrderDAO = Depends(),
+) -> OrderDetailsResp:
+    order_details = await order_dao.get_order_details(order_id)
+    if order_details is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
+        )
+    return order_details
+
+
+@router.get(
+    "/{order_id}/status",
+    status_code=status.HTTP_200_OK,
+    response_model=OrderStatusResp,
+)
+async def get_order_status(
+    order_id: uuid.UUID,
+    order_dao: OrderDAO = Depends(),
+) -> OrderStatusResp:
+    order_status = await order_dao.get_order_status(order_id)
+    if order_status is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
+        )
+    return order_status
