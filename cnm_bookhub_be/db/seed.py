@@ -95,6 +95,9 @@ async def seed_data() -> None:  # noqa: PLR0915
                     is_superuser=True,
                     is_verified=True,
                     is_active=True,
+                    address_detail="123 Võ Văn Kiệt",
+                    phone_number="0909090909",
+                    ward_code="10003",
                 )
                 session.add(superuser)
                 await session.flush()
@@ -109,6 +112,9 @@ async def seed_data() -> None:  # noqa: PLR0915
                     is_superuser=False,
                     is_verified=True,
                     is_active=True,
+                    address_detail="123 Võ Văn Kiệt",
+                    phone_number="0909090909",
+                    ward_code="10003",
                 )
                 session.add(user)
                 await session.flush()

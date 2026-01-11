@@ -50,6 +50,7 @@ class BooksByCategoryDTO(BaseModel):
     description: str | None = None
     more_info: dict | None = None
 
+
 class BookListResponse(BaseModel):
     items: list[BookDTO]
     totalPage: int

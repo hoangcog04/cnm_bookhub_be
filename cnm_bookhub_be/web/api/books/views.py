@@ -1,11 +1,19 @@
 import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from cnm_bookhub_be.db.dao.book_dao import BookDAO
 from cnm_bookhub_be.db.models.books import Book
-from cnm_bookhub_be.web.api.books.schema import (BookDTO,BookCreateDTO,BookUpdateDTO, BooksByCategoryDTO, BookListResponse)
+from cnm_bookhub_be.web.api.books.schema import (
+    BookCreateDTO,
+    BookDTO,
+    BookListResponse,
+    BooksByCategoryDTO,
+    BookUpdateDTO,
+)
 
 router = APIRouter()
+
 
 @router.get("/", response_model=BookListResponse)
 async def get_books(
@@ -16,12 +24,10 @@ async def get_books(
     book_dao: BookDAO = Depends(),
 ) -> BookListResponse:
     items, total_page = await book_dao.get_books(
-        limit=limit, 
-        offset=offset, 
-        book_name=q, 
-        category_id=category_id
+        limit=limit, offset=offset, book_name=q, category_id=category_id
     )
     return BookListResponse(items=items, totalPage=total_page)
+
 
 @router.get("/{book_id}", response_model=BookDTO)
 async def get_book_by_id(
@@ -35,6 +41,7 @@ async def get_book_by_id(
             detail="Book not found",
         )
     return book
+
 
 @router.post("/", response_model=BookDTO, status_code=status.HTTP_201_CREATED)
 async def create_book(
@@ -51,6 +58,7 @@ async def create_book(
         more_info=payload.more_info,
         category_id=payload.category_id,
     )
+
 
 @router.put("/{book_id}", response_model=BookDTO)
 async def update_book(
@@ -69,6 +77,7 @@ async def update_book(
         )
     return book
 
+
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book(
     book_id: uuid.UUID,
@@ -81,6 +90,7 @@ async def delete_book(
             detail="Book not found",
         )
 
+
 @router.post("/{book_id}/soft-delete")
 async def soft_delete_book(
     book_id: uuid.UUID,
@@ -92,7 +102,8 @@ async def soft_delete_book(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Book not found or already deleted",
         )
-        
+
+
 @router.get("/category/{category_id}", response_model=list[BooksByCategoryDTO])
 async def get_books_by_category(
     category_id: int,
