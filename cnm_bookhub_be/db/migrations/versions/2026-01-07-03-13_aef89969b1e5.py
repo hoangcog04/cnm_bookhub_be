@@ -20,8 +20,8 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "cart",
-        sa.Column("user_id", sa.UUID(), nullable=False),
-        sa.Column("book_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", GUID(), nullable=False),
+        sa.Column("book_id", GUID(), nullable=False),
         sa.Column("quantity", sa.Integer(), nullable=False),
         sa.Column("deleted", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),

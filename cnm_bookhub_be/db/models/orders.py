@@ -17,6 +17,7 @@ class OrderStatus(StrEnum):
     REQUIRE_PAYMENT = "require_payment"  # wait for stripe webhook
     CANCELLED = "cancelled"  # cancelled by user or admin
     CHARGED = "charged"  # after stripe webhook
+    SHIPPED = "shipped"  # after shipping
     COMPLETED = "completed"  # after delivery
 
 
@@ -29,7 +30,7 @@ class Order(Base):
         nullable=False,
     )
     status: Mapped[OrderStatus] = mapped_column(
-        Enum(OrderStatus, native_enum=False, length=50), nullable=False
+        Enum("pending", "require_payment", "cancelled", "charged", "shipped", "completed", name="orderstatus", native_enum=False, length=50), nullable=False
     )
     address_at_purchase: Mapped[str] = mapped_column(Text, nullable=False)
     payment_intent_id: Mapped[str] = mapped_column(String(length=255), nullable=True)
