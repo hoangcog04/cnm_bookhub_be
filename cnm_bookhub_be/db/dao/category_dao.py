@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from cnm_bookhub_be.db.dependencies import get_db_session
 from cnm_bookhub_be.db.models.categories import Category
-
 class CategoryDAO:
     def __init__(self, session: AsyncSession = Depends(get_db_session)) -> None:
         self.session = session

@@ -28,8 +28,12 @@ from cnm_bookhub_be.services.oauth_service import (
 from cnm_bookhub_be.settings import settings
 from cnm_bookhub_be.web.api.orders.schema import OrderHistoryDTO
 from cnm_bookhub_be.web.api.users.custom_oauth import get_custom_oauth_router
+from cnm_bookhub_be.web.api.users.admin_routes import admin_users_router
 
 router = APIRouter()
+
+# Include admin routes
+router.include_router(admin_users_router)
 
 router.include_router(
     api_users.get_register_router(UserRead, UserCreate),

@@ -3,6 +3,7 @@ import uuid
 
 from sqlalchemy import delete, select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from fastapi import Depends
 
 from cnm_bookhub_be.db.dependencies import get_db_session
@@ -33,8 +34,8 @@ class UserDAO:
         :param user_name: filter string for name or email.
         :return: list of users and total pages.
         """
-        # Base query
-        query = select(User).outerjoin(User.ward).outerjoin(Ward.province)
+        # Base query with eager loading (nested)
+        query = select(User).options(selectinload(User.ward).selectinload(Ward.province))
 
         if user_name:
             query = query.where(
@@ -69,9 +70,29 @@ class UserDAO:
         :param user_id: id of user.
         :return: user model or None.
         """
-        query = select(User).where(User.id == user_id).outerjoin(User.ward).outerjoin(Ward.province)
+        query = select(User).where(User.id == user_id).options(selectinload(User.ward).selectinload(Ward.province))
         result = await self.session.execute(query)
         return result.unique().scalar_one_or_none()
+
+    async def update_user(self, user_id: uuid.UUID, **fields) -> Optional[User]:
+        """
+        Update user information.
+
+        :param user_id: ID of user to update.
+        :param fields: fields to update.
+        :return: updated user model or None if user not found.
+        """
+        user = await self.get_user_by_id(user_id)
+        if user is None:
+            return None
+
+        for key, value in fields.items():
+            if value is not None and hasattr(user, key):
+                setattr(user, key, value)
+
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
 
     async def delete_user(self, user_id: uuid.UUID) -> bool:
         """
