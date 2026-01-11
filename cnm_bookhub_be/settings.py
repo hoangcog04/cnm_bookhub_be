@@ -44,10 +44,36 @@ class Settings(BaseSettings):
     # Variables for the database
     db_host: str = "localhost"
     db_port: int = 3306
-    db_user: str = "cnm_bookhub_be"
-    db_pass: str = "cnm_bookhub_be"  # noqa: S105
+    db_user: str = "root"
+    db_pass: str = ""  # noqa: S105
     db_base: str = "cnm_bookhub_be"
     db_echo: bool = False
+
+    # Cloudinary Settings
+    cloud_name: str = ""
+    api_key: str = ""
+    api_secret: str = ""
+
+    # Mail
+    email_provider: str = "mailpit"  # mailpit, sendgrid
+    # Mailpit Settings
+    mailpit_host: str = "localhost"
+    mailpit_port: int = 1025
+    # Sendgrid Settings
+    sendgrid_api_key: str = ""
+    sendgrid_from_email: str = ""
+
+    # GitHub OAuth
+    github_client_id: str = ""
+    github_client_secret: str = ""
+
+    #  Google Oauth
+    google_client_id: str = ""
+    google_client_secret: str = ""
+
+    # Stripe
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
 
     @property
     def db_url(self) -> URL:

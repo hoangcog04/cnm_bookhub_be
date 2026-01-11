@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cnm_bookhub_be.db.base import Base
@@ -19,7 +19,7 @@ class Book(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(length=255), nullable=False)
     author: Mapped[str] = mapped_column(String(length=255), nullable=False)
-    price: Mapped[float] = mapped_column(Float, nullable=False)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     image_urls: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -31,6 +31,19 @@ class Book(Base):
 
     # Relationships
     category: Mapped["Category"] = relationship("Category", back_populates="books")
+
+    @property
+    def category_name(self) -> str | None:
+        try:
+            return self.category.name if self.category else "Chưa phân loại"
+        except Exception:
+            return "Chưa phân loại"
     order_items: Mapped[list["OrderItem"]] = relationship(
         "OrderItem", back_populates="book"
     )
+
+    @property
+    def category_name(self) -> str | None:
+        if self.category:
+            return self.category.name
+        return None

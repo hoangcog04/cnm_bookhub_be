@@ -23,6 +23,10 @@ dependencies = [
   "cryptography >=46.0.3,<47",
   "httptools >=0.7.1,<1",
   "pymongo >=4.15.4,<5",
+  "cloudinary >=1.41.0,<2",
+  "fastapi-mail>=1.6.1",
+  "sendgrid>=6.12.5",
+  "stripe>=14.1.0",
 ]
 
 [dependency-groups]
@@ -106,6 +110,11 @@ lint.select = [ "E",     # Error
 	"UP",	 # Python updates
 ]
 lint.ignore = [
+    "ERA001",
+    "D101",
+    "D102",
+    "D103",
+    "T201",
     "D105",    # Missing docstring in magic method
     "D107",    # Missing docstring in __init__
     "B008",    # Do not perform function calls in argument defaults
@@ -119,11 +128,11 @@ lint.ignore = [
     "PLR0913", # Too many arguments for function call
     "D106",    # Missing docstring in public nested class
 ]
+lint.mccabe = { max-complexity = 10 }
 exclude = [
     "cnm_bookhub_be/db/migrations",
     ".venv/"
 ]
-lint.mccabe = { max-complexity = 10 }
 line-length = 88
 
 [tool.ruff.lint.per-file-ignores]

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+        }
+
+        .header {
+            padding: 24px 30px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #111111;
+        }
+
+        .content {
+            padding: 30px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .content p {
+            margin: 0 0 16px 0;
+        }
+
+        .otp-section {
+            margin: 24px 0;
+            padding: 20px;
+            background-color: #fafafa;
+            border: 1px solid #dddddd;
+            text-align: center;
+        }
+
+        .otp-label {
+            font-size: 12px;
+            color: #666666;
+            margin-bottom: 8px;
+        }
+
+        .otp-code {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: 6px;
+            color: #000000;
+        }
+
+        .expiry {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666666;
+        }
+
+        .note {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #555555;
+        }
+
+        .footer {
+            padding: 20px 30px;
+            background-color: #fafafa;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #777777;
+        }
+
+        .footer a {
+            color: #555555;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Xác thực tài khoản</h1>
+        </div>
+
+        <div class="content">
+            <p>Xin chào <strong>{{ username }}</strong>,</p>
+
+            <p>
+                Chúng tôi nhận được yêu cầu đăng ký tài khoản trên hệ thống.
+                Vui lòng sử dụng mã xác thực dưới đây để hoàn tất quá trình đăng ký:
+            </p>
+
+            <div class="otp-section">
+                <div class="otp-label">MÃ XÁC THỰC</div>
+                <div class="otp-code">{{ otp_code }}</div>
+                <div class="expiry">
+                    Mã có hiệu lực trong {{ expires_in }} phút
+                </div>
+            </div>
+
+            <p class="note">
+                Vì lý do bảo mật, vui lòng không chia sẻ mã này với bất kỳ ai.
+                Nếu bạn không thực hiện yêu cầu này, bạn có thể bỏ qua email.
+            </p>
+
+            <p>
+                Trân trọng,<br>
+                <strong>CNM BookHub</strong>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+            <p>© 2025 CNM BookHub Company</p>
+            <p>
+                <a href="https://cnm-bookhub.com">https://cnm-bookhub.com</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

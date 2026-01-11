@@ -1,0 +1,7 @@
+services:
+  mailpit:
+    image: docker.io/axllent/mailpit:latest
+    container_name: cnm_bookhub_be_local_mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"

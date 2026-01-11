@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Xác thực tài khoản</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f3f3f3;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+        }
+        .content {
+            padding: 30px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333333;
+        }
+        .button {
+            display: inline-block;
+            margin: 24px 0;
+            padding: 12px 20px;
+            background-color: #1a73e8;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+        .footer {
+            padding: 20px 30px;
+            background: #fafafa;
+            font-size: 12px;
+            color: #777777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <p>Xin chào <strong>{{username}}</strong>,</p>
+
+            <p>
+                Cảm ơn bạn đã đăng ký tài khoản tại <strong>CNM_BOOKHUB</strong>.
+                Để hoàn tất quá trình đăng ký và kích hoạt tài khoản, vui lòng xác minh địa chỉ email của bạn.
+            </p>
+
+            <p>
+                <a href="{{verify_url}}" class="button">
+                    Xác minh email & kích hoạt tài khoản
+                </a>
+            </p>
+
+            <p>
+                Liên kết xác minh chỉ có hiệu lực trong một khoảng thời gian nhất định.
+                Nếu nút không hoạt động, bạn có thể sao chép và dán liên kết sau vào trình duyệt:
+            </p>
+
+            <p style="word-break: break-all;">
+                {{verify_url}}
+            </p>
+
+            <p>
+                Nếu bạn không thực hiện việc đăng ký tài khoản, vui lòng bỏ qua email này.
+                Không cần thực hiện thêm hành động nào khác.
+            </p>
+
+            <p>
+                Trân trọng,<br>
+                <strong>CNM_BOOKHUB</strong>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+        </div>
+    </div>
+</body>
+</html>

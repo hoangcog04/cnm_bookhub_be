@@ -76,17 +76,17 @@ async def seed_data() -> None:  # noqa: PLR0915
     async with async_session() as session:
         try:
             # 1. Create superuser
-            print("Creating superuser...")  # noqa: T201
+            print("Creating superuser...")
             password_helper = PasswordHelper()
 
             # Check if user already exists
             result = await session.execute(
                 select(User).where(User.email == "admin@example.com")  # type: ignore
             )
-            existing_user = result.scalar_one_or_none()
+            existing_user = result.unique().scalar_one_or_none()
 
             if existing_user:
-                print("Superuser already exists, skipping...")  # noqa: T201
+                print("Superuser already exists, skipping...")
             else:
                 hashed_password = password_helper.hash("123456")
                 superuser = User(
@@ -95,13 +95,33 @@ async def seed_data() -> None:  # noqa: PLR0915
                     is_superuser=True,
                     is_verified=True,
                     is_active=True,
+                    address_detail="123 Võ Văn Kiệt",
+                    phone_number="0909090909",
+                    ward_code="10003",
                 )
                 session.add(superuser)
                 await session.flush()
-                print(f"Superuser created: {superuser.email} with password 123456")  # noqa: T201
+                print(f"Superuser created: {superuser.email} with password 123456")
+
+            # 1.5 create 5 users
+            print("Creating 5 users...")
+            for i in range(5):
+                user = User(
+                    email=f"user{i + 1}@example.com",
+                    hashed_password=password_helper.hash("123456"),
+                    is_superuser=False,
+                    is_verified=True,
+                    is_active=True,
+                    address_detail="123 Võ Văn Kiệt",
+                    phone_number="0909090909",
+                    ward_code="10003",
+                )
+                session.add(user)
+                await session.flush()
+                print(f"User created: {user.email}")
 
             # 2. Create category "Truyện tranh"
-            print("Creating category...")  # noqa: T201
+            print("Creating category...")
             result = await session.execute(
                 select(Category).where(Category.name == "Truyện tranh")
             )
@@ -109,15 +129,15 @@ async def seed_data() -> None:  # noqa: PLR0915
 
             if existing_category:
                 category = existing_category
-                print("Category already exists, using existing...")  # noqa: T201
+                print("Category already exists, using existing...")
             else:
                 category = Category(name="Truyện tranh")
                 session.add(category)
                 await session.flush()
-                print(f"Category created: {category.name}")  # noqa: T201
+                print(f"Category created: {category.name}")
 
             # 3. Create books
-            print("Creating books...")  # noqa: T201
+            print("Creating books...")
             books_data = [
                 {
                     "title": "12 THÚ CƯNG GIÁNG SINH",
@@ -175,23 +195,23 @@ async def seed_data() -> None:  # noqa: PLR0915
                 existing_book = result.scalar_one_or_none()
 
                 if existing_book:
-                    print(f"Book '{book_data['title']}' already exists, skipping...")  # noqa: T201
+                    print(f"Book '{book_data['title']}' already exists, skipping...")
                     continue
 
                 book = Book(**book_data)
                 session.add(book)
                 created_count += 1
-                print(f"Book created: {book.title}")  # noqa: T201
+                print(f"Book created: {book.title}")
 
             await session.commit()
-            print("\n✅ Seed completed successfully!")  # noqa: T201
-            print("   - Superuser: admin@example.com / password123")  # noqa: T201
-            print("   - Category: Truyện tranh")  # noqa: T201
-            print(f"   - Books created: {created_count}/5")  # noqa: T201
+            print("\n✅ Seed completed successfully!")
+            print("   - Superuser: admin@example.com / password123")
+            print("   - Category: Truyện tranh")
+            print(f"   - Books created: {created_count}/5")
 
         except Exception as e:
             await session.rollback()
-            print(f"\n❌ Error seeding data: {e}")  # noqa: T201
+            print(f"\n❌ Error seeding data: {e}")
             raise
         finally:
             await engine.dispose()

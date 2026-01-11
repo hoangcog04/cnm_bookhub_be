@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, File, UploadFile
 from fastapi.param_functions import Depends
 
 from cnm_bookhub_be.db.dao.dummy_dao import DummyDAO
@@ -37,3 +37,6 @@ async def create_dummy_model(
     :param dummy_dao: DAO for dummy models.
     """
     await dummy_dao.create_dummy_model(name=new_dummy_object.name)
+
+
+
