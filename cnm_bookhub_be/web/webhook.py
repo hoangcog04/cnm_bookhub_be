@@ -41,7 +41,7 @@ async def stripe_webhook(
     # Handle the event
     if event.type == "payment_intent.succeeded":
         payment_intent = event.data.object
-        await order_dao.mark_order_as_processed(payment_intent["id"])
+        await order_dao.mask_order_as_charged(payment_intent["id"])
         print(f"PaymentIntent {payment_intent['id']} succeeded")
 
     elif event.type == "payment_method.attached":

@@ -13,10 +13,10 @@ if TYPE_CHECKING:
 
 
 class OrderStatus(StrEnum):
-    PENDING = "pending"  # wait for stripe
-    REQUIRE_PAYMENT = "require_payment"  # wait for stripe webhook
+    REQUIRE_PAYMENT = "require_payment"  # wait for checkout
+    WAITING_FOR_CONFIRMATION = "waiting_for_confirmation"  # waiting for confirmation
+    DELIVERY_IN_PROGRESS = "delivery_in_progress"  # delivery in progress
     CANCELLED = "cancelled"  # cancelled by user or admin
-    CHARGED = "charged"  # after stripe webhook
     COMPLETED = "completed"  # after delivery
 
 
