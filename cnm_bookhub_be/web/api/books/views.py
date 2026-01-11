@@ -3,17 +3,25 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from cnm_bookhub_be.db.dao.book_dao import BookDAO
 from cnm_bookhub_be.db.models.books import Book
-from cnm_bookhub_be.web.api.books.schema import (BookDTO,BookCreateDTO,BookUpdateDTO, BooksByCategoryDTO)
+from cnm_bookhub_be.web.api.books.schema import (BookDTO,BookCreateDTO,BookUpdateDTO, BooksByCategoryDTO, BookListResponse)
 
 router = APIRouter()
 
-@router.get("/", response_model=list[BookDTO])
+@router.get("/", response_model=BookListResponse)
 async def get_books(
     limit: int = 10,
-    offset: int = 0,
+    offset: int = 1,
+    q: str | None = None,
+    category_id: int | None = None,
     book_dao: BookDAO = Depends(),
-) -> list[Book]:
-    return await book_dao.get_books(limit=limit, offset=offset)
+) -> BookListResponse:
+    items, total_page = await book_dao.get_books(
+        limit=limit, 
+        offset=offset, 
+        book_name=q, 
+        category_id=category_id
+    )
+    return BookListResponse(items=items, totalPage=total_page)
 
 @router.get("/{book_id}", response_model=BookDTO)
 async def get_book_by_id(

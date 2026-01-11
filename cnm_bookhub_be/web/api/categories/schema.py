@@ -11,3 +11,7 @@ class CategoryInputDTO(BaseModel):
     
 class CategoryUpdateDTO(BaseModel):
     name: str | None = None
+
+class CategoryListResponse(BaseModel):
+    items: list[CategoryDTO]
+    totalPage: int

@@ -31,6 +31,19 @@ class Book(Base):
 
     # Relationships
     category: Mapped["Category"] = relationship("Category", back_populates="books")
+
+    @property
+    def category_name(self) -> str | None:
+        try:
+            return self.category.name if self.category else "Chưa phân loại"
+        except Exception:
+            return "Chưa phân loại"
     order_items: Mapped[list["OrderItem"]] = relationship(
         "OrderItem", back_populates="book"
     )
+
+    @property
+    def category_name(self) -> str | None:
+        if self.category:
+            return self.category.name
+        return None

@@ -19,3 +19,10 @@ class Category(Base):
 
     # Relationships
     books: Mapped[list["Book"]] = relationship("Book", back_populates="category")
+
+    @property
+    def number_of_books(self) -> int:
+        try:
+            return len(self.books)
+        except Exception:
+            return 0
