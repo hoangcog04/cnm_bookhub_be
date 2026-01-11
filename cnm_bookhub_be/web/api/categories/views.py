@@ -2,18 +2,20 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.param_functions import Depends
 from cnm_bookhub_be.db.dao.category_dao import CategoryDAO
 from cnm_bookhub_be.db.models.categories import Category
-from cnm_bookhub_be.web.api.categories.schema import (CategoryDTO, CategoryInputDTO, CategoryUpdateDTO)
+from cnm_bookhub_be.web.api.categories.schema import (CategoryDTO, CategoryInputDTO, CategoryUpdateDTO, CategoryListResponse)
 
 router = APIRouter()
 
 #GET ALL
-@router.get("/", response_model=list[CategoryDTO])
+@router.get("/", response_model=CategoryListResponse)
 async def get_categories(
     limit: int = 10, 
-    offset: int = 0, 
+    offset: int = 1, 
+    name: str | None = None,
     dao: CategoryDAO = Depends(),
-) -> list[Category]:
-    return await dao.get_all_category(limit=limit, offset=offset)
+) -> CategoryListResponse:
+    items, total_page = await dao.get_all_category(limit=limit, offset=offset, name=name)
+    return CategoryListResponse(items=items, totalPage=total_page)
 
 #GET BY ID
 @router.get("/{id}", response_model=CategoryDTO)
@@ -27,12 +29,12 @@ async def get_category(
     return item
 
 #POST
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=CategoryDTO, status_code=status.HTTP_201_CREATED)
 async def create_category(
     new_item: CategoryInputDTO,
     dao: CategoryDAO = Depends(),
-) -> None:
-    await dao.create_category(**new_item.model_dump())
+) -> Category:
+    return await dao.create_category(**new_item.model_dump())
     
 #PUT
 @router.put("/{id}", response_model=CategoryDTO)

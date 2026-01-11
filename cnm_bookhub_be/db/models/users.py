@@ -1,6 +1,6 @@
 # type: ignore
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase, SQLAlchemyBaseOAuthAccountTableUUID
 from fastapi import Depends
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin, schemas
@@ -25,6 +25,9 @@ from cnm_bookhub_be.services.email_service import (
     TEMPLATE_RESET_PASSWORD_NAME
 )
 
+from datetime import datetime
+from cnm_bookhub_be.web.api.wards.schema import WardDTO
+from cnm_bookhub_be.web.api.provinces.schema import ProvinceDTO
 if TYPE_CHECKING:
     from cnm_bookhub_be.db.models.orders import Order
     from cnm_bookhub_be.db.models.social_accounts import SocialAccount
@@ -67,6 +70,24 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     ward_code: str | None = None
     address_detail: str | None = None
     role: str | None = None
+    is_superuser: bool = False
+    is_active: bool = True
+    created_at: datetime | None = None
+
+
+class UserReadWithWard(UserRead):
+    """Represents a read command for a user with ward and province."""
+
+    class WardWithProvince(WardDTO):
+        province: Optional[ProvinceDTO] = None
+
+    ward: Optional[WardWithProvince] = None
+
+
+class UserListResponse(schemas.BaseModel):
+    """Paginated user list response."""
+    items: List[UserReadWithWard]
+    totalPage: int
 
 
 class UserCreate(schemas.BaseUserCreate):

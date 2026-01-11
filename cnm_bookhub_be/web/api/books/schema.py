@@ -13,6 +13,7 @@ class BookDTO(BaseModel):
     description: str | None
     more_info: dict | None
     category_id: int
+    category_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -48,3 +49,7 @@ class BooksByCategoryDTO(BaseModel):
     image_urls: str | None = None
     description: str | None = None
     more_info: dict | None = None
+
+class BookListResponse(BaseModel):
+    items: list[BookDTO]
+    totalPage: int
