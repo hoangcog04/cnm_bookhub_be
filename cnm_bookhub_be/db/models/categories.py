@@ -16,6 +16,7 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(length=255), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(length=500), nullable=True)
 
     # Relationships
     books: Mapped[list["Book"]] = relationship("Book", back_populates="category")
