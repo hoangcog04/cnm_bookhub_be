@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from cnm_bookhub_be.db.dao.cart_dao import CartDAO
+from cnm_bookhub_be.db.models.users import User, current_active_user
 from cnm_bookhub_be.web.api.carts.schema import (
     AddCartItemDTO,
     CartItemDTO,
@@ -35,13 +36,13 @@ async def add_item(
 
 @router.put("/items/{book_id}")
 async def update_item(
-    user_id: UUID,
     book_id: UUID,
     payload: UpdateCartItemDTO,
     cart_dao: CartDAO = Depends(),
+    user: User = Depends(current_active_user),
 ):
     item = await cart_dao.update_quantity(
-        user_id,
+        user.id,
         book_id,
         payload.quantity,
     )
@@ -50,14 +51,14 @@ async def update_item(
     return item
 
 
-@router.post("/items/{book_id}")
-async def remove_item(
-    user_id: UUID,
-    book_id: UUID,
-    cart_dao: CartDAO = Depends(),
-):
-    if not await cart_dao.soft_delete(user_id, book_id):
-        raise HTTPException(404, "Item not found")
+# @router.post("/items/{book_id}")
+# async def remove_item(
+#     user_id: UUID,
+#     book_id: UUID,
+#     cart_dao: CartDAO = Depends(),
+# ):
+#     if not await cart_dao.soft_delete(user_id, book_id):
+#         raise HTTPException(404, "Item not found")
 
 
 @router.delete(
@@ -65,13 +66,14 @@ async def remove_item(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def hard_delete_cart_item(
-    user_id: UUID,
     book_id: UUID,
     cart_dao: CartDAO = Depends(),
-):
-    deleted = await cart_dao.hard_delete(user_id, book_id)
+    user: User = Depends(current_active_user),
+) -> Response:
+    deleted = await cart_dao.hard_delete(user.id, book_id)
     if not deleted:
         raise HTTPException(
             status_code=404,
             detail="Cart item not found",
         )
+    return Response(status_code=status.HTTP_204_NO_CONTENT, content="")
