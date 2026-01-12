@@ -11,7 +11,6 @@ from cnm_bookhub_be.db.models.orders import Order
 from cnm_bookhub_be.db.models.users import (
     User,  # type: ignore
     UserCreate,  # type: ignore
-    UserProfileUpdate,  # type: ignore
     UserRead,  # type: ignore
     UserUpdate,  # type: ignore
     UserListResponse, # type: ignore
@@ -102,106 +101,21 @@ async def get_my_order_history_by_status(
     user: User = Depends(current_active_user),  # type: ignore
     order_dao: OrderDAO = Depends(),
 ) -> list[Order]:
-    """
-    Get current user's order history filtered by status.
-
-    Valid status values:
-    - pending (Chờ xử lý)
-    - processing (Đã xử lý)
-    - shipped (Đang vận chuyển)
-    - completed (Thành công)
-    - cancelled (Đã hủy)
-    """
     return await order_dao.get_orders_by_user_and_status(user.id, status)
 
 
-@router.patch("/users/me/profile", response_model=UserRead, tags=["users"])
-async def update_my_profile(
-    profile_data: UserProfileUpdate,
-    user: User = Depends(current_active_user),  # type: ignore
-    session: "AsyncSession" = Depends(get_db_session),  # type: ignore
-) -> User:
-    """Update current user's profile information.
+# Get the users router from fastapi-users
+users_router = api_users.get_users_router(UserRead, UserUpdate)
 
-    Only allows updating profile fields (full_name, phone_number, avatar_url,
-    ward_code, address_detail). For password/email changes, use dedicated endpoints.
-    """
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    # Update only fields that are provided (not None)
-    update_data = profile_data.model_dump(exclude_unset=True)
-
-    for field, value in update_data.items():
-        setattr(user, field, value)
-
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
-
-    return user
-
-
-@router.get("/users/all", response_model=UserListResponse, tags=["users"])
-async def get_all_users(
-    limit: int = 10,
-    offset: int = 1,
-    user_name: Optional[str] = None,
-    user_dao: UserDAO = Depends(),
-    current_user: User = Depends(current_active_user),
-) -> UserListResponse:
-    """List all users (Admin only)."""
-    if not current_user.is_superuser:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    users, total_pages = await user_dao.get_all_users(limit, offset, user_name)
-    return UserListResponse(items=users, totalPage=total_pages)
-
-
-@router.get("/users/admin/{id}", response_model=UserReadWithWard, tags=["users"])
-async def get_user_detail(
-    id: uuid.UUID,
-    user_dao: UserDAO = Depends(),
-    current_user: User = Depends(current_active_user),
-) -> User:
-    """Get user details (Admin only)."""
-    if not current_user.is_superuser:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    user = await user_dao.get_user_by_id(id)
-    if not user:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
-
-@router.delete("/users/{id}", status_code=204, tags=["users"])
-async def delete_user(
-    id: uuid.UUID,
-    user_dao: UserDAO = Depends(),
-    current_user: User = Depends(current_active_user),
-):
-    """Delete user (Admin only)."""
-    if not current_user.is_superuser:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    if current_user.id == id:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="Cannot delete yourself")
-
-    success = await user_dao.delete_user(id)
-    if not success:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    from fastapi import Response
-    return Response(status_code=204)
-
+# Remove the PATCH /users/{id} route for security reasons
+# This route allows updating any user without admin checks
+users_router.routes = [
+    route for route in users_router.routes
+    if not (hasattr(route, 'name') and route.name == 'users:patch_user')
+]
 
 router.include_router(
-    api_users.get_users_router(UserRead, UserUpdate),
+    users_router,
     prefix="/users",
     tags=["users"],
 )

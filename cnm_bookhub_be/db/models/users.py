@@ -101,12 +101,7 @@ class UserCreate(schemas.BaseUserCreate):
     pass
 
 
-class UserUpdate(schemas.BaseUserUpdate):
-    """Represents an update command for a user profile.
-
-    Only profile fields should be updated. Password and email changes
-    require separate endpoints with proper verification.
-    """
+class UserUpdate(schemas.BaseModel):
 
     full_name: str | None = None
     avatar_url: str | None = None
@@ -115,18 +110,18 @@ class UserUpdate(schemas.BaseUserUpdate):
     address_detail: str | None = None
 
 
-class UserProfileUpdate(schemas.BaseModel):
-    """Schema for updating user profile only.
-
-    This is used for the dedicated /users/me/profile endpoint
-    and only includes safe profile fields.
-    """
-
-    full_name: str | None = None
-    avatar_url: str | None = None
-    phone_number: str | None = None
-    ward_code: str | None = None
-    address_detail: str | None = None
+    def create_update_dict(self) -> dict:
+        """Create update dict for Pydantic V2 compatibility.
+        
+        This method is called by fastapi-users for compatibility.
+        Returns only the set fields, excluding email and password.
+        """
+        # Use model_dump(exclude_unset=True) for Pydantic V2
+        update_dict = self.model_dump(exclude_unset=True)
+        # Remove email and password from update dict to prevent unauthorized changes
+        update_dict.pop('email', None)
+        update_dict.pop('password', None)
+        return update_dict
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
@@ -156,15 +151,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         self, user: User, token: str, request: Request | None = None
     ) -> None:
         print(f"Sending Verification Link for {user.email}")
-        # Construct the verification URL
-        # For local dev, we assume localhost:3000 (Frontend) or backend URL if just testing API
-        # Let's point to the backend verify endpoint for now or a frontend route
-        # Since user asked about "clicking link", usually it goes to FE.
-        # But if no FE, let's point to a backend dummy or just print it.
-        # Assuming we want to verify via GET request (which fastapi-users supports)
-        # OR we point to a FE page that grabs the token and POSTs to backend.
-
-        # Let's generate a full URL.
         verify_url = f"http://localhost:8000/api/auth/verify?token={token}"
 
         await email_service.send_email(
@@ -200,33 +186,16 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 async def get_user_db(
     session: AsyncSession = Depends(get_db_session),
 ) -> SQLAlchemyUserDatabase:
-    """
-    Yield a SQLAlchemyUserDatabase instance.
-
-    :param session: asynchronous SQLAlchemy session.
-    :yields: instance of SQLAlchemyUserDatabase.
-    """
     yield SQLAlchemyUserDatabase(session, User, OAuthAccount)
 
 
 async def get_user_manager(
     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
 ) -> UserManager:
-    """
-    Yield a UserManager instance.
-
-    :param user_db: SQLAlchemy user db instance
-    :yields: an instance of UserManager.
-    """
     yield UserManager(user_db)
 
 
 def get_jwt_strategy() -> JWTStrategy:
-    """
-    Return a JWTStrategy in order to instantiate it dynamically.
-
-    :returns: instance of JWTStrategy with provided settings.
-    """
     return JWTStrategy(
         secret=settings.users_secret, lifetime_seconds=settings.users_lifetime_seconds
     )
