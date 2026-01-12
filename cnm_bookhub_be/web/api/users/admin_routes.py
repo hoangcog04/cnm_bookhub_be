@@ -35,14 +35,6 @@ async def list_users(
     user_dao: UserDAO = Depends(),
     _: User = Depends(check_admin_permission),
 ) -> UserAdminListResponse:
-    """
-    List all users with pagination and search.
-    
-    Query Parameters:
-    - limit: Number of users per page (default: 10)
-    - offset: Page number, 1-based (default: 1)
-    - search: Search by full_name or email
-    """
     users, total_pages = await user_dao.get_all_users(
         limit=limit,
         offset=offset,
@@ -74,16 +66,6 @@ async def update_user(
     user_dao: UserDAO = Depends(),
     admin_user: User = Depends(check_admin_permission),
 ) -> User:
-    """
-    Update user information.
-    
-    Admin can update:
-    - full_name: User's full name
-    - phone_number: User's phone number
-    - role: User's role/status
-    - is_active: Active status
-    - is_superuser: Admin status
-    """
     if user_id == admin_user.id and not update_data.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
