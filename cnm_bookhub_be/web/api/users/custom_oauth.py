@@ -10,6 +10,7 @@ from httpx_oauth.integrations.fastapi import OAuth2AuthorizeCallback
 from httpx_oauth.oauth2 import BaseOAuth2
 
 from cnm_bookhub_be.db.models.users import get_user_manager
+from cnm_bookhub_be.settings import settings
 
 def get_custom_oauth_router(
     oauth_client: BaseOAuth2,
@@ -97,7 +98,7 @@ def get_custom_oauth_router(
             token_str = await strategy.write_token(user)
             
             # REDIRECT TO FRONTEND
-            redirect_url = f"http://localhost:8080/Auth/index.html?token={token_str}"
+            redirect_url = f"{settings.frontend_url}/Auth/index.html?token={token_str}"
             
             return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
             
