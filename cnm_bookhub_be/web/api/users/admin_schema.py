@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict
 
 
 class UserAdminDTO(BaseModel):
@@ -18,10 +18,9 @@ class UserAdminDTO(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    @computed_field
     @property
     def role(self) -> str:
-        """Computed role based on is_superuser."""
+        """Compute role based on is_superuser."""
         return "ADMIN" if self.is_superuser else "USER"
 
 
@@ -43,10 +42,9 @@ class UserAdminDetailDTO(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    @computed_field
     @property
     def role(self) -> str:
-        """Computed role based on is_superuser."""
+        """Compute role based on is_superuser."""
         return "ADMIN" if self.is_superuser else "USER"
 
 

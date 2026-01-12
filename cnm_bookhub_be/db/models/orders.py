@@ -2,7 +2,7 @@ import uuid
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cnm_bookhub_be.db.base import Base
@@ -28,9 +28,7 @@ class Order(Base):
         ForeignKey("users.id"),
         nullable=False,
     )
-    status: Mapped[OrderStatus] = mapped_column(
-        Enum(OrderStatus, native_enum=False, length=50), nullable=False
-    )
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
     address_at_purchase: Mapped[str] = mapped_column(Text, nullable=False)
     payment_intent_id: Mapped[str] = mapped_column(String(length=255), nullable=True)
     total_price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

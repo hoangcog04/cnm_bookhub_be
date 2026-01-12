@@ -2,7 +2,7 @@ import uuid
 from typing import List, Optional, Tuple
 
 from fastapi import Depends
-from sqlalchemy import select, func, or_
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -49,8 +49,10 @@ class BookDAO:
         book_name: Optional[str] = None,
         category_id: Optional[int] = None,
     ) -> Tuple[List[Book], int]:
-        query = select(Book).options(joinedload(Book.category)).where(Book.deleted == False)
-        
+        query = (
+            select(Book).options(joinedload(Book.category)).where(Book.deleted == False)
+        )
+
         if book_name:
             query = query.where(
                 or_(
@@ -58,10 +60,10 @@ class BookDAO:
                     Book.author.ilike(f"%{book_name}%"),
                 )
             )
-            
+
         if category_id:
             query = query.where(Book.category_id == category_id)
-            
+
         # Count total
         count_query = select(func.count(Book.id)).where(Book.deleted == False)
         total_res = await self.session.execute(count_query)
@@ -69,14 +71,14 @@ class BookDAO:
 
         # Pagination logic (offset 1-based from FE)
         skip = (offset - 1) * limit if offset > 0 else 0
-        
+
         result = await self.session.execute(
             query.limit(limit).offset(skip).order_by(Book.id.desc()),
         )
         items = list(result.scalars().unique().all())
-        
+
         total_pages = (total + limit - 1) // limit if limit > 0 else 1
-        
+
         return items, total_pages
 
     async def get_book_by_id(
@@ -88,7 +90,7 @@ class BookDAO:
             .options(joinedload(Book.category))
             .where(
                 Book.id == book_id,
-                Book.deleted == False,
+                Book.deleted.is_(False),
             ),
         )
         return result.scalar_one_or_none()
