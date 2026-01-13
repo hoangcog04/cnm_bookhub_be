@@ -55,7 +55,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     role: Mapped[str | None] = mapped_column(String(length=50), nullable=True)
 
     # Relationships
-    ward: Mapped["Ward"] = relationship("Ward", back_populates="users")
+    ward: Mapped["Ward"] = relationship("Ward", back_populates="users", lazy="selectin")
     social_accounts: Mapped[list["SocialAccount"]] = relationship(
         "SocialAccount", back_populates="user"
     )

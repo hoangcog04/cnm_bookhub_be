@@ -1,0 +1,27 @@
+services:
+  mysql:
+    image: mysql:8.4
+    ports:
+      - "${CNM_BOOKHUB_BE_DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_USER: "${CNM_BOOKHUB_BE_DB_USER:-cnm_bookhub_be}"
+      MYSQL_PASSWORD: "${CNM_BOOKHUB_BE_DB_PASS:-cnm_bookhub_be}"
+      MYSQL_DATABASE: "${CNM_BOOKHUB_BE_DB_BASE:-cnm_bookhub_be}"
+      MYSQL_ROOT_PASSWORD: "${CNM_BOOKHUB_BE_DB_ROOT_PASSWORD:-cnm_bookhub_be}"
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - --user=${CNM_BOOKHUB_BE_DB_USER:-cnm_bookhub_be}
+        - --password=${CNM_BOOKHUB_BE_DB_PASS:-cnm_bookhub_be}
+      interval: 10s
+      timeout: 5s
+      retries: 40
+    volumes:
+      - mysql-local-data:/var/lib/mysql
+
+volumes:
+  mysql-local-data:
+    name: mysql-local-data
+

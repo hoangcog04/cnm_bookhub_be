@@ -15,13 +15,9 @@ services:
       - traefik.http.routers.cnm_bookhub_be.entrypoints=http
       - traefik.http.routers.cnm_bookhub_be.service=cnm_bookhub_be
       - traefik.http.services.cnm_bookhub_be.loadbalancer.server.port=${CNM_BOOKHUB_BE_PORT:-8000}
-    ports:
-      - "${CNM_BOOKHUB_BE_PORT:-8000}:${CNM_BOOKHUB_BE_PORT:-8000}"
     networks:
       - default
       - traefik-shared
-    volumes:
-      - .:/app/src
     depends_on:
       db:
         condition: service_healthy
@@ -30,7 +26,7 @@ services:
     environment:
       CNM_BOOKHUB_BE_HOST: 0.0.0.0
       CNM_BOOKHUB_BE_DB_HOST: cnm_bookhub_be-db
-      CNM_BOOKHUB_BE_DB_PORT: 3307
+      CNM_BOOKHUB_BE_DB_PORT: 3306
       CNM_BOOKHUB_BE_DB_USER: cnm_bookhub_be
       CNM_BOOKHUB_BE_DB_PASS: cnm_bookhub_be
       CNM_BOOKHUB_BE_DB_BASE: cnm_bookhub_be
@@ -39,9 +35,6 @@ services:
     image: mysql:8.4
     hostname: cnm_bookhub_be-db
     restart: always
-    command: ["mysqld", "--port=3307"]
-    ports:
-      - "${CNM_BOOKHUB_BE_DB_PORT:-3307}:3307"
     environment:
       MYSQL_USER: "cnm_bookhub_be"
       MYSQL_PASSWORD: "cnm_bookhub_be"
@@ -55,7 +48,6 @@ services:
         - ping
         - --user=cnm_bookhub_be
         - --password=cnm_bookhub_be
-        - --port=3307
       interval: 10s
       timeout: 5s
       retries: 40
@@ -69,6 +61,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+
 
 volumes:
   cnm_bookhub_be-db-data:
