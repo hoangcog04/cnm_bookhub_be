@@ -1,7 +1,7 @@
 """Fix shipped enum values to delivery_in_progress.
 
 Revision ID: fix_shipped_enum
-Revises: 8bf2bfdf5704
+Revises: add_category_description
 Create Date: 2026-01-12 00:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy import VARCHAR
 
 # revision identifiers, used by Alembic.
 revision = "fix_shipped_enum"
-down_revision = "8bf2bfdf5704"
+down_revision = "add_category_description"
 branch_labels = None
 depends_on = None
 
