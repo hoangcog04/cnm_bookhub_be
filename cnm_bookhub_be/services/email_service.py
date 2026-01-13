@@ -22,7 +22,7 @@ _mailpit_templates = {
 _sendgrid_templates = {
     TEMPLATE_OTP_NAME: "d-7a9e94e48a304cbdaccbf6053c988c3f",
     TEMPLATE_LINK_VERIFICATION_NAME: "d-29030853d30f4c6486ca255508583083",
-    TEMPLATE_RESET_PASSWORD_NAME: "", # Placeholder for Sendgrid
+    TEMPLATE_RESET_PASSWORD_NAME: "d-1e6cc9f3fd4a43dd8142265123e08873"
 }
 
 
