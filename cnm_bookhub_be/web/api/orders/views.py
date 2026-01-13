@@ -4,14 +4,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from cnm_bookhub_be.db.dao.cart_dao import CartDAO
 from cnm_bookhub_be.db.dao.order_dao import OrderDAO
-from cnm_bookhub_be.db.models.orders import Order
+from cnm_bookhub_be.db.models.orders import Order, OrderStatus
 from cnm_bookhub_be.db.models.users import User, current_active_user
 from cnm_bookhub_be.services.stripe_service import stripe_service
 from cnm_bookhub_be.web.api.orders.schema import (
+    AdminOrderDetailResp,
+    CustomerInfoDTO,
     OrderCreateDTO,
     OrderDetailsResp,
     OrderDTO,
     OrderHistoryResp,
+    OrderItemListDTO,
+    OrderListDTO,
+    OrderListResponse,
     OrderReq,
     OrderResp,
     OrderStatusResp,
@@ -29,6 +34,81 @@ async def get_orders(
 ) -> list[Order]:
     """Get all orders."""
     return await order_dao.get_all_orders(limit=limit, offset=offset)
+
+
+@router.get("/getAll", response_model=OrderListResponse)
+async def get_all_orders(
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(1, ge=1),
+    order_id: str | None = Query(None),
+    order_status: str | None = Query(None),
+    order_date: str | None = Query(None),
+    order_dao: OrderDAO = Depends(),
+) -> OrderListResponse:
+    """Get all orders with filters and pagination for admin."""
+    # Convert offset from 1-based to 0-based
+    offset_0_based = (offset - 1) * limit
+
+    orders, total = await order_dao.get_all_orders_with_filters(
+        limit=limit,
+        offset=offset_0_based,
+        order_id=order_id,
+        order_status=order_status,
+        order_date=order_date,
+    )
+
+    # Transform orders to OrderListDTO
+    order_list_items = []
+    for order in orders:
+        # Map status to frontend format
+        frontend_status = order_dao.map_status_to_frontend(order.status)
+
+        # Build customer info
+        customer = CustomerInfoDTO(
+            id=order.user.id,
+            name=order.user.full_name,
+            email=order.user.email,
+            phone=order.user.phone_number,
+        )
+
+        # Build order items
+        items = []
+        for order_item in order.order_items:
+            item = OrderItemListDTO(
+                book_id=order_item.book_id,
+                title=order_item.book.title,
+                price=order_item.price_at_purchase,
+                quantity=order_item.quantity,
+                image_url=order_item.book.image_urls.split(",")[0]
+                if order_item.book.image_urls
+                else None,
+                author=order_item.book.author,
+            )
+            items.append(item)
+
+        # Calculate shipping fee (assuming 30000 VND, can be adjusted)
+        shipping_fee = 30000 if order.total_price < 500000 else 0
+
+        order_dto = OrderListDTO(
+            id=order.id,
+            customer=customer,
+            items=items,
+            total_amount=order.total_price,
+            shipping_fee=shipping_fee,
+            status=frontend_status,
+            created_at=order.created_at,
+            payment_method="online" if order.payment_intent_id else "cod",
+            shipping_address=order.address_at_purchase,
+        )
+        order_list_items.append(order_dto)
+
+    total_pages = (total + limit - 1) // limit if total > 0 else 1
+
+    return OrderListResponse(
+        items=order_list_items,
+        total=total,
+        totalPage=total_pages,
+    )
 
 
 @router.get("/history", response_model=list[OrderHistoryResp])
@@ -145,6 +225,53 @@ async def request_order(
         id=order.id,
         payment_intent_id=payment_intent_id,
     )
+
+
+@router.get(
+    "/admin/{order_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=AdminOrderDetailResp,
+)
+async def get_admin_order_details(
+    order_id: uuid.UUID,
+    order_dao: OrderDAO = Depends(),
+) -> AdminOrderDetailResp:
+    """Get order details for admin panel."""
+    order_data = await order_dao.get_admin_order_details(order_id)
+    if order_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Order not found"
+        )
+    return AdminOrderDetailResp(**order_data)
+
+
+@router.patch(
+    "/admin/{order_id}/status",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def update_admin_order_status(
+    order_id: uuid.UUID,
+    order_update: OrderUpdateDTO,
+    order_dao: OrderDAO = Depends(),
+) -> None:
+    """Update order status for admin panel."""
+    if not order_update.status:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Status is required",
+        )
+
+    # Validate status
+    try:
+        order_status = OrderStatus(order_update.status)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status: {order_update.status}",
+        ) from err
+
+    # Use mask_order_status for all valid statuses
+    await order_dao.mask_order_status(order_id, order_status)
 
 
 @router.get(

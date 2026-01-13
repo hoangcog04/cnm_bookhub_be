@@ -153,3 +153,80 @@ class OrderHistoryDTO(BaseModel):
         return len(self.order_items)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CustomerInfoDTO(BaseModel):
+    """Customer information for order list."""
+
+    id: uuid.UUID
+    name: str | None
+    email: str
+    phone: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderItemListDTO(BaseModel):
+    """Order item for list view."""
+
+    book_id: uuid.UUID
+    title: str
+    price: int
+    quantity: int
+    image_url: str | None
+    author: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderListDTO(BaseModel):
+    """Order information for admin list view."""
+
+    id: uuid.UUID
+    customer: CustomerInfoDTO
+    items: list[OrderItemListDTO]
+    total_amount: int
+    shipping_fee: int = 0
+    status: str
+    created_at: datetime
+    payment_method: str
+    shipping_address: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderListResponse(BaseModel):
+    """Response for order list with pagination."""
+
+    items: list[OrderListDTO]
+    total: int
+    totalPage: int  # noqa: N815
+
+
+class AdminOrderItemDetailDTO(BaseModel):
+    """Order item for admin detail view."""
+
+    book_id: uuid.UUID
+    title: str
+    price: int
+    quantity: int
+    image_url: str | None
+    author: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdminOrderDetailResp(BaseModel):
+    """Order detail response for admin panel."""
+
+    id: uuid.UUID
+    created_at: datetime
+    payment_method: str  # cod, banking, vnpay
+    customer: CustomerInfoDTO
+    shipping_address: str
+    items: list[AdminOrderItemDetailDTO]
+    shipping_fee: int
+    total_amount: int
+    status: str  # pending, shipping, completed, cancelled
+
+    model_config = ConfigDict(from_attributes=True)

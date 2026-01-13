@@ -1,7 +1,6 @@
 """Seed script to populate orders and order items for testing."""
 
 import asyncio
-from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -55,8 +54,7 @@ async def seed_orders() -> None:
             # 3. Create sample orders
             print("\n📦 Creating orders...")  # noqa: T201
 
-            # Order 1: Completed order from 10 days ago
-            order1_date = datetime.utcnow() - timedelta(days=10)
+            # Check if orders already exist
             result = await session.execute(
                 select(Order).where(Order.user_id == user.id).limit(1)
             )
@@ -69,6 +67,7 @@ async def seed_orders() -> None:
                     user_id=user.id,
                     status=OrderStatus.COMPLETED.value,
                     address_at_purchase="123 Nguyen Hue, District 1, Ho Chi Minh City",
+                    total_price=0,  # Will be calculated after adding items
                 )
                 session.add(order1)
                 await session.flush()
@@ -88,7 +87,16 @@ async def seed_orders() -> None:
                 )
                 session.add(order1_item1)
                 session.add(order1_item2)
-                print(f"   ✓ Order 1: {order1.status} - 2 items")  # noqa: T201
+                await session.flush()
+
+                # Calculate total_price for order 1
+                order1.total_price = (
+                    order1_item1.quantity * order1_item1.price_at_purchase
+                    + order1_item2.quantity * order1_item2.price_at_purchase
+                )
+                print(
+                    f"   ✓ Order 1: {order1.status} - 2 items - Total: {order1.total_price:,} VNĐ"
+                )  # noqa: T201
                 orders_created += 1
 
                 # Order 2: Pending order from 3 days ago
@@ -96,6 +104,7 @@ async def seed_orders() -> None:
                     user_id=user.id,
                     status=OrderStatus.WAITING_FOR_CONFIRMATION.value,
                     address_at_purchase="456 Le Loi, District 3, Ho Chi Minh City",
+                    total_price=0,  # Will be calculated after adding items
                 )
                 session.add(order2)
                 await session.flush()
@@ -122,7 +131,17 @@ async def seed_orders() -> None:
                 session.add(order2_item1)
                 session.add(order2_item2)
                 session.add(order2_item3)
-                print(f"   ✓ Order 2: {order2.status} - 3 items")  # noqa: T201
+                await session.flush()
+
+                # Calculate total_price for order 2
+                order2.total_price = (
+                    order2_item1.quantity * order2_item1.price_at_purchase
+                    + order2_item2.quantity * order2_item2.price_at_purchase
+                    + order2_item3.quantity * order2_item3.price_at_purchase
+                )
+                print(
+                    f"   ✓ Order 2: {order2.status} - 3 items - Total: {order2.total_price:,} VNĐ"
+                )  # noqa: T201
                 orders_created += 1
 
                 # Order 3: Shipped order from 5 days ago
@@ -130,6 +149,7 @@ async def seed_orders() -> None:
                     user_id=user.id,
                     status=OrderStatus.COMPLETED.value,
                     address_at_purchase="789 Tran Hung Dao, District 5, Ho Chi Minh City",
+                    total_price=0,  # Will be calculated after adding items
                 )
                 session.add(order3)
                 await session.flush()
@@ -142,7 +162,15 @@ async def seed_orders() -> None:
                     price_at_purchase=books[0].price,
                 )
                 session.add(order3_item1)
-                print(f"   ✓ Order 3: {order3.status} - 1 item")  # noqa: T201
+                await session.flush()
+
+                # Calculate total_price for order 3
+                order3.total_price = (
+                    order3_item1.quantity * order3_item1.price_at_purchase
+                )
+                print(
+                    f"   ✓ Order 3: {order3.status} - 1 item - Total: {order3.total_price:,} VNĐ"
+                )  # noqa: T201
                 orders_created += 1
 
                 await session.commit()

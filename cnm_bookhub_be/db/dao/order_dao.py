@@ -219,11 +219,11 @@ class OrderDAO:
         return True
 
     async def mask_order_status(self, order_id: uuid.UUID, status: OrderStatus) -> bool:
-        if status not in [
-            OrderStatus.WAITING_FOR_CONFIRMATION,
-            OrderStatus.DELIVERY_IN_PROGRESS,
-        ]:
-            raise HTTPException(status_code=400, detail="Invalid status")
+        # Allow all statuses except REQUIRE_PAYMENT
+        if status == OrderStatus.REQUIRE_PAYMENT:
+            raise HTTPException(
+                status_code=400, detail="Cannot set status to require_payment"
+            )
 
         result = await self.session.execute(
             select(Order).where(Order.id == order_id),
@@ -233,7 +233,11 @@ class OrderDAO:
             raise HTTPException(status_code=404, detail="Order not found")
 
         order_status = order.status
-        if order_status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
+        # Prevent updating if already completed or cancelled (unless setting to cancelled)
+        if (
+            order_status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]
+            and status != OrderStatus.CANCELLED
+        ):
             raise HTTPException(
                 status_code=400, detail="Order is already completed or cancelled"
             )
@@ -349,3 +353,169 @@ class OrderDAO:
             payment_method="online" if order.payment_intent_id else "cod",
             total_price=order.total_price,
         )
+
+    def map_status_to_frontend(self, backend_status: str) -> str:
+        """Map backend status to frontend status."""
+        status_mapping = {
+            OrderStatus.REQUIRE_PAYMENT: "pending",
+            OrderStatus.WAITING_FOR_CONFIRMATION: "pending",
+            OrderStatus.DELIVERY_IN_PROGRESS: "shipping",
+            OrderStatus.COMPLETED: "completed",
+            OrderStatus.CANCELLED: "cancelled",
+        }
+        return status_mapping.get(backend_status, backend_status)
+
+    def _map_status_to_backend(self, frontend_status: str) -> str | None:
+        """Map frontend status to backend status."""
+        if frontend_status == "pending":
+            return None  # Will match both REQUIRE_PAYMENT and WAITING_FOR_CONFIRMATION
+        status_mapping = {
+            "shipping": OrderStatus.DELIVERY_IN_PROGRESS,
+            "completed": OrderStatus.COMPLETED,
+            "cancelled": OrderStatus.CANCELLED,
+        }
+        return status_mapping.get(frontend_status)
+
+    async def get_all_orders_with_filters(
+        self,
+        limit: int,
+        offset: int,
+        order_id: str | None = None,
+        order_status: str | None = None,
+        order_date: str | None = None,
+    ) -> tuple[list[Order], int]:
+        """Get all orders with filters and pagination."""
+        from datetime import datetime
+
+        from sqlalchemy import String, cast, func, or_
+
+        # Build base query
+        base_query = select(Order).where(Order.deleted == False)
+
+        # Filter by order_id (search in UUID string representation)
+        if order_id:
+            try:
+                # Try to parse as UUID
+                order_uuid = uuid.UUID(order_id)
+                base_query = base_query.where(Order.id == order_uuid)
+            except ValueError:
+                # If not valid UUID, search in string representation
+                base_query = base_query.where(
+                    cast(Order.id, String).ilike(f"%{order_id}%")
+                )
+
+        # Filter by status
+        if order_status and order_status != "all":
+            backend_status = self._map_status_to_backend(order_status)
+            if backend_status:
+                base_query = base_query.where(Order.status == backend_status)
+            elif order_status == "pending":
+                # Match both REQUIRE_PAYMENT and WAITING_FOR_CONFIRMATION
+                base_query = base_query.where(
+                    or_(
+                        Order.status == OrderStatus.REQUIRE_PAYMENT,
+                        Order.status == OrderStatus.WAITING_FOR_CONFIRMATION,
+                    )
+                )
+
+        # Filter by date
+        if order_date:
+            try:
+                filter_date = datetime.strptime(order_date, "%Y-%m-%d").date()
+                base_query = base_query.where(
+                    func.date(Order.created_at) == filter_date
+                )
+            except ValueError:
+                pass  # Invalid date format, ignore
+
+        # Get total count before pagination
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # Apply pagination, ordering and load relationships
+        query = (
+            base_query.options(
+                selectinload(Order.user),
+                selectinload(Order.order_items).selectinload(OrderItem.book),
+            )
+            .order_by(Order.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        # Execute query
+        result = await self.session.execute(query)
+        orders = list(result.unique().scalars().fetchall())
+
+        return orders, total
+
+    async def get_admin_order_details(
+        self,
+        order_id: uuid.UUID,
+    ) -> dict | None:
+        """Get order details for admin panel."""
+        result = await self.session.execute(
+            select(Order)
+            .where(Order.id == order_id)
+            .options(
+                selectinload(Order.user),
+                selectinload(Order.order_items).selectinload(OrderItem.book),
+            )
+        )
+        order = result.unique().scalar_one_or_none()
+
+        if order is None:
+            return None
+
+        # Map payment method
+        payment_method = "cod"
+        if order.payment_intent_id:
+            payment_method = (
+                "online"  # Could be "banking" or "vnpay" based on payment_intent
+            )
+            # For now, default to "online", can be enhanced later
+
+        # Return status directly from OrderStatus enum (waiting_for_confirmation, delivery_in_progress, completed, cancelled)
+        backend_status = str(order.status)
+
+        # Build customer info (as dict for Pydantic to parse)
+        customer = {
+            "id": order.user.id,
+            "name": order.user.full_name,
+            "email": order.user.email,
+            "phone": order.user.phone_number,
+        }
+
+        # Build order items (as list of dicts for Pydantic to parse)
+        items = []
+        for order_item in order.order_items:
+            image_url = None
+            if order_item.book.image_urls:
+                image_url = order_item.book.image_urls.split(",")[0]
+
+            item = {
+                "book_id": order_item.book_id,
+                "title": order_item.book.title,
+                "price": order_item.price_at_purchase,
+                "quantity": order_item.quantity,
+                "image_url": image_url,
+                "author": order_item.book.author,
+            }
+            items.append(item)
+
+        # Calculate shipping fee (same logic as getAll)
+        shipping_fee = 30000 if order.total_price < 500000 else 0
+
+        # Return dict that matches AdminOrderDetailResp schema
+        return {
+            "id": order.id,
+            "created_at": order.created_at,
+            "payment_method": payment_method,
+            "customer": customer,
+            "shipping_address": order.address_at_purchase,
+            "items": items,
+            "shipping_fee": shipping_fee,
+            "total_amount": order.total_price,
+            "status": backend_status,
+        }
