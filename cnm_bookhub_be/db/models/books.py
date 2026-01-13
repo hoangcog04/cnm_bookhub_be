@@ -38,6 +38,7 @@ class Book(Base):
             return self.category.name if self.category else "Chưa phân loại"
         except Exception:
             return "Chưa phân loại"
+
     order_items: Mapped[list["OrderItem"]] = relationship(
         "OrderItem", back_populates="book"
     )
